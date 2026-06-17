@@ -1428,7 +1428,7 @@ async function loadAllData(uid) {
       db.from('finance_accounts').select('*').eq('user_id', uid).order('sort_order'),
       db.from('subscriptions').select('*').eq('user_id', uid).order('sort_order'),
       db.from('user_settings').select('*').eq('user_id', uid).maybeSingle(),
-      db.from('profiles').select('*').eq('user_id', uid).maybeSingle(),
+      db.from('profiles').select('*').eq('id', uid).maybeSingle(),
     ]);
 
     if (vitalsRow) {
@@ -1569,9 +1569,10 @@ async function submitOnboarding() {
   errEl.style.display = 'none';
 
   const goals = [...document.querySelectorAll('#onboarding-screen input[type=checkbox]:checked')].map(c => c.value);
+  localStorage.setItem('lifemaxx_primary_goals', JSON.stringify(goals));
   try {
     const { error } = await db.from('profiles').insert({
-      user_id: currentUser.id,
+      id: currentUser.id,
       name,
       age:   parseInt(document.getElementById('ob-age').value)    || null,
       gender: document.getElementById('ob-gender').value,
@@ -1581,9 +1582,9 @@ async function submitOnboarding() {
       sleep_time: document.getElementById('ob-sleep-time').value,
       weekly_training_hours: parseFloat(document.getElementById('ob-training').value) || null,
       daily_caffeine_mg: parseInt(document.getElementById('ob-caffeine-goal').value)  || null,
-      primary_goals: goals,
     });
     if (error) throw error;
+    localStorage.setItem('lifemaxx_profile_name', name);
     userProfile = { name };
     setGreetingName(name);
     showAppScreen();
@@ -1605,7 +1606,7 @@ async function submitOnboarding() {
 // The listener only drives background refresh or handles fresh sign-in/out.
 let _fastShowDone = false;
 
-db.auth.onAuthStateChange(async (event, session) => {
+db.auth.onAuthStateChange((event, session) => {
   if (event === 'INITIAL_SESSION') {
     if (session?.user) {
       currentUser = session.user;
@@ -1613,19 +1614,34 @@ db.auth.onAuthStateChange(async (event, session) => {
         // App already visible — refresh data silently in the background
         backgroundRefresh(session.user.id);
       } else {
-        // Session exists but no local cache — show app instantly, load data behind the scenes
+        // Session exists but no local cache
         initState();
-        const { data: profile } = await db.from('profiles').select('name').eq('user_id', currentUser.id).maybeSingle();
         _fastShowDone = true;
-        if (!profile) {
-          showOnboardingScreen();
-        } else {
-          userProfile = profile;
-          setGreetingName(profile.name);
+        const cachedName = localStorage.getItem('lifemaxx_profile_name');
+        if (cachedName) {
+          userProfile = { name: cachedName };
+          setGreetingName(cachedName);
           showAppScreen();
           initTheme();
           renderPeak();
           backgroundRefresh(currentUser.id);
+        } else {
+          // Must determine onboarding status — non-blocking
+          db.from('profiles').select('name').eq('id', currentUser.id).maybeSingle()
+            .then(({ data: profile }) => {
+              if (profile) {
+                localStorage.setItem('lifemaxx_profile_name', profile.name);
+                userProfile = profile;
+                setGreetingName(profile.name);
+                showAppScreen();
+                initTheme();
+                renderPeak();
+                backgroundRefresh(currentUser.id);
+              } else {
+                showOnboardingScreen();
+              }
+            })
+            .catch(() => { showAuthScreen(); });
         }
       }
     } else if (!_fastShowDone) {
@@ -1634,31 +1650,41 @@ db.auth.onAuthStateChange(async (event, session) => {
       showAuthScreen();
     }
   } else if (event === 'SIGNED_IN') {
-    // Fresh sign-in — show the app immediately, load data behind the scenes
     currentUser = session.user;
     initState();
     _fastShowDone = true;
-    _authBtnLoading(false); // reset the auth form spinner
-
-    // Quick profile check (name only — one tiny query)
-    const { data: profile } = await db.from('profiles').select('name').eq('user_id', currentUser.id).maybeSingle();
-    if (!profile) {
-      showOnboardingScreen();
-    } else {
-      // Show app instantly with empty state, then populate in background
-      userProfile = profile;
-      setGreetingName(profile.name);
+    _authBtnLoading(false);
+    const cachedName = localStorage.getItem('lifemaxx_profile_name');
+    if (cachedName) {
+      userProfile = { name: cachedName };
+      setGreetingName(cachedName);
       showAppScreen();
       initTheme();
       renderPeak();
-      // Load all real data without blocking the UI
       backgroundRefresh(currentUser.id);
+    } else {
+      db.from('profiles').select('name').eq('id', currentUser.id).maybeSingle()
+        .then(({ data: profile }) => {
+          if (!profile) {
+            showOnboardingScreen();
+          } else {
+            localStorage.setItem('lifemaxx_profile_name', profile.name);
+            userProfile = profile;
+            setGreetingName(profile.name);
+            showAppScreen();
+            initTheme();
+            renderPeak();
+            backgroundRefresh(currentUser.id);
+          }
+        })
+        .catch(() => { showOnboardingScreen(); });
     }
   } else if (event === 'SIGNED_OUT') {
     _fastShowDone = false;
     currentUser = null; userProfile = null;
     initState();
     localStorage.removeItem(STATE_KEY);
+    localStorage.removeItem('lifemaxx_profile_name');
     showAuthScreen();
   }
 });
@@ -2945,21 +2971,24 @@ function formatCurrency(n) {
     if (raw) cachedUser = JSON.parse(raw)?.user || null;
   } catch {}
 
-  const hasCachedState = !!localStorage.getItem(STATE_KEY);
+  const cachedProfileName = localStorage.getItem('lifemaxx_profile_name');
 
-  if (cachedUser && hasCachedState) {
+  if (cachedUser && cachedProfileName) {
     // Returning user — show the app instantly using cached data.
     // onAuthStateChange will validate the session and refresh data in background.
     currentUser = cachedUser;
-    try { Object.assign(S, JSON.parse(localStorage.getItem(STATE_KEY))); } catch {}
+    const cachedState = localStorage.getItem(STATE_KEY);
+    if (cachedState) { try { Object.assign(S, JSON.parse(cachedState)); } catch {} }
+    userProfile = { name: cachedProfileName };
+    setGreetingName(cachedProfileName);
     _fastShowDone = true;
     showAppScreen();
     renderPeak();
   } else {
-    // No local cache — show the loading overlay while Supabase resolves the session.
-    // Hard cap of 1s: if onAuthStateChange hasn't fired by then, show auth screen.
+    // No confirmed returning user — show the loading overlay while Supabase resolves the session.
+    // Hard cap of 500ms: if onAuthStateChange hasn't fired by then, show auth screen.
     showLoadingScreen();
-    setTimeout(() => { if (!_fastShowDone) { _fastShowDone = true; showAuthScreen(); } }, 1000);
+    setTimeout(() => { if (!_fastShowDone) { _fastShowDone = true; showAuthScreen(); } }, 500);
   }
 
   // Register service worker for offline-first caching
