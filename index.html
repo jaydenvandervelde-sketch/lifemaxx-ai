@@ -1535,10 +1535,7 @@ async function submitAuth() {
 
 async function signOut() {
   await db.auth.signOut();
-  currentUser = null; userProfile = null;
-  initState();
-  localStorage.removeItem(STATE_KEY);
-  showAuthScreen();
+  // onAuthStateChange SIGNED_OUT handles the state reset and UI switch
   toast('Signed out', 'info');
 }
 
@@ -1586,11 +1583,42 @@ async function submitOnboarding() {
 }
 
 // ── Auth state listener ────────────────────────────────────────────────────
+// _fastShowDone = true means init() already showed the app from cached state.
+// The listener only drives background refresh or handles fresh sign-in/out.
+let _fastShowDone = false;
+
 db.auth.onAuthStateChange(async (event, session) => {
-  if (session?.user) {
+  if (event === 'INITIAL_SESSION') {
+    if (session?.user) {
+      currentUser = session.user;
+      if (_fastShowDone) {
+        // App already visible — refresh data silently in the background
+        backgroundRefresh(session.user.id);
+      } else {
+        // No cached state — load data, then show
+        initState();
+        const { data: profile } = await db.from('profiles').select('name').eq('user_id', currentUser.id).maybeSingle();
+        _fastShowDone = true;
+        if (!profile) {
+          showOnboardingScreen();
+        } else {
+          await loadAllData(currentUser.id);
+          showAppScreen();
+          initTheme();
+          renderPeak();
+        }
+      }
+    } else if (!_fastShowDone) {
+      // No session at all
+      _fastShowDone = true;
+      showAuthScreen();
+    }
+  } else if (event === 'SIGNED_IN') {
+    // Fresh sign-in from the auth form
     currentUser = session.user;
     initState();
     const { data: profile } = await db.from('profiles').select('name').eq('user_id', currentUser.id).maybeSingle();
+    _fastShowDone = true;
     if (!profile) {
       showOnboardingScreen();
     } else {
@@ -1599,10 +1627,28 @@ db.auth.onAuthStateChange(async (event, session) => {
       initTheme();
       renderPeak();
     }
-  } else {
+  } else if (event === 'SIGNED_OUT') {
+    _fastShowDone = false;
+    currentUser = null; userProfile = null;
+    initState();
+    localStorage.removeItem(STATE_KEY);
     showAuthScreen();
   }
 });
+
+async function backgroundRefresh(uid) {
+  try {
+    await loadAllData(uid);
+    renderPeak();
+    const active = document.querySelector('.section.active')?.id?.replace('sec-', '');
+    if (active === 'health')  renderHealth();
+    if (active === 'finance') renderFinance();
+    if (active === 'goals')   renderGoals();
+    if (active === 'workout') renderWorkout();
+  } catch (e) {
+    console.warn('Background refresh failed:', e);
+  }
+}
 
 // ── Toast ──────────────────────────────────────────────────────────────────
 function toast(msg, type = 'success') {
@@ -2862,8 +2908,32 @@ function formatCurrency(n) {
 (function init() {
   initState();
   initTheme();
-  showLoadingScreen();
-  // Auth state listener above handles the rest after session check
+
+  // Read the Supabase session directly from localStorage — synchronous, zero latency.
+  // Key format: sb-<project-ref>-auth-token
+  const SB_SESSION_KEY = 'sb-wgbbbtscfvbvpplfocal-auth-token';
+  let cachedUser = null;
+  try {
+    const raw = localStorage.getItem(SB_SESSION_KEY);
+    if (raw) cachedUser = JSON.parse(raw)?.user || null;
+  } catch {}
+
+  const hasCachedState = !!localStorage.getItem(STATE_KEY);
+
+  if (cachedUser && hasCachedState) {
+    // Returning user — show the app instantly using cached data.
+    // onAuthStateChange will validate the session and refresh data in background.
+    currentUser = cachedUser;
+    try { Object.assign(S, JSON.parse(localStorage.getItem(STATE_KEY))); } catch {}
+    _fastShowDone = true;
+    showAppScreen();
+    renderPeak();
+  } else {
+    // No local cache — show the loading overlay while Supabase resolves the session.
+    // Hard cap of 1s: if onAuthStateChange hasn't fired by then, show auth screen.
+    showLoadingScreen();
+    setTimeout(() => { if (!_fastShowDone) { _fastShowDone = true; showAuthScreen(); } }, 1000);
+  }
 })();
 </script>
 </body>
