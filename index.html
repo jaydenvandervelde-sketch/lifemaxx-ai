@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     /* ─── Reset & Base ─────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -484,15 +485,196 @@
     html.light .section-header {
       background: var(--bg);
     }
+
+    /* ─── Loading Overlay ──────────────────────────────── */
+    #loading-overlay {
+      position: fixed; inset: 0; background: var(--bg); z-index: 600;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    #loading-overlay.hidden { display: none; }
+
+    /* ─── Auth Screen ──────────────────────────────────── */
+    #auth-screen {
+      position: fixed; inset: 0; background: var(--bg); z-index: 500;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px; overflow-y: auto;
+    }
+    #auth-screen.hidden { display: none; }
+
+    /* ─── Onboarding ───────────────────────────────────── */
+    #onboarding-screen {
+      position: fixed; inset: 0; background: var(--bg); z-index: 500;
+      overflow-y: auto; padding: 24px; display: none;
+    }
+    #onboarding-screen.visible { display: block; }
+    .ob-goal-label {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 0; border-bottom: 1px solid var(--border); cursor: pointer;
+    }
+    .ob-goal-label:last-child { border-bottom: none; }
+    .ob-goal-label input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--purple); flex-shrink: 0; }
+
+    /* ─── Spinner ──────────────────────────────────────── */
+    .spinner {
+      border: 3px solid var(--border);
+      border-top-color: var(--purple);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Save Indicator ───────────────────────────────── */
+    #save-indicator {
+      position: fixed; top: 10px; right: 60px; z-index: 300;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 3px 10px; font-size: 11px;
+      color: var(--text-muted); display: none; align-items: center; gap: 5px;
+      pointer-events: none;
+    }
+    #save-indicator.visible { display: flex; }
+    .save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); animation: blink 1s ease-in-out infinite; }
+    .save-dot.synced { background: var(--green); animation: none; }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
   </style>
 </head>
 <body>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay">
+  <div style="text-align:center;">
+    <div style="font-size:44px;margin-bottom:20px;filter:drop-shadow(0 0 20px rgba(124,58,237,.5));">⚡</div>
+    <div class="spinner" style="width:40px;height:40px;margin:0 auto;"></div>
+    <div style="margin-top:16px;font-size:14px;color:var(--text-muted);">Loading Lifemaxx...</div>
+  </div>
+</div>
+
+<!-- Auth Screen -->
+<div id="auth-screen" class="hidden">
+  <div style="width:100%;max-width:380px;">
+    <div style="text-align:center;margin-bottom:40px;">
+      <div style="font-size:52px;margin-bottom:14px;filter:drop-shadow(0 0 24px rgba(124,58,237,.6));">⚡</div>
+      <h1 style="margin-bottom:6px;">Lifemaxx AI</h1>
+      <p class="muted small">Your elite life optimization dashboard</p>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" id="auth-tab-signin" onclick="switchAuthTab('signin')">Sign In</button>
+      <button class="tab-btn" id="auth-tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
+    </div>
+    <div id="auth-error" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.5);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:14px;"></div>
+    <div class="input-group">
+      <label class="input-label">Email</label>
+      <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" />
+    </div>
+    <div class="input-group">
+      <label class="input-label">Password</label>
+      <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')submitAuth()" />
+    </div>
+    <button class="btn btn-primary btn-full" id="auth-submit" onclick="submitAuth()"
+      style="margin-top:8px;padding:14px;font-size:16px;gap:8px;">
+      <span id="auth-btn-text">Sign In</span>
+      <div id="auth-btn-spinner" class="spinner" style="width:18px;height:18px;border-width:2px;display:none;"></div>
+    </button>
+  </div>
+</div>
+
+<!-- Onboarding Screen -->
+<div id="onboarding-screen">
+  <div style="max-width:420px;margin:0 auto;padding-bottom:40px;">
+    <div style="text-align:center;margin-bottom:28px;padding-top:16px;">
+      <div style="font-size:38px;margin-bottom:10px;">⚡</div>
+      <h2 style="margin-bottom:4px;">Set Up Your Profile</h2>
+      <p class="muted small">Personalises your experience from day one</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">About You</div>
+      <div class="input-group">
+        <label class="input-label">Your Name</label>
+        <input type="text" id="ob-name" placeholder="e.g. Jayden" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="input-group">
+          <label class="input-label">Age</label>
+          <input type="number" id="ob-age" placeholder="22" min="10" max="100" />
+        </div>
+        <div class="input-group">
+          <label class="input-label">Gender</label>
+          <select id="ob-gender">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Weight (kg)</label>
+          <input type="number" id="ob-weight" placeholder="80" min="30" max="300" step="0.1" />
+        </div>
+        <div class="input-group">
+          <label class="input-label">Height (cm)</label>
+          <input type="number" id="ob-height" placeholder="180" min="100" max="250" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Sleep Schedule</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="input-group">
+          <label class="input-label">Wake Time</label>
+          <input type="time" id="ob-wake" value="07:00" />
+        </div>
+        <div class="input-group">
+          <label class="input-label">Target Sleep Time</label>
+          <input type="time" id="ob-sleep-time" value="23:00" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Training & Habits</div>
+      <div class="input-group">
+        <label class="input-label">Weekly Training Hours</label>
+        <input type="number" id="ob-training" placeholder="5" min="0" max="40" step="0.5" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Daily Caffeine Intake (mg)</label>
+        <input type="number" id="ob-caffeine-goal" placeholder="200" min="0" max="1000" />
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Primary Goals</div>
+      <p class="small muted" style="margin-bottom:10px;">Select all that apply</p>
+      <label class="ob-goal-label"><input type="checkbox" value="Build muscle" /><span>Build muscle</span></label>
+      <label class="ob-goal-label"><input type="checkbox" value="Lose fat" /><span>Lose fat</span></label>
+      <label class="ob-goal-label"><input type="checkbox" value="Improve sleep" /><span>Improve sleep</span></label>
+      <label class="ob-goal-label"><input type="checkbox" value="Boost energy" /><span>Boost energy</span></label>
+      <label class="ob-goal-label"><input type="checkbox" value="Build a brand" /><span>Build a brand</span></label>
+      <label class="ob-goal-label"><input type="checkbox" value="Master finances" /><span>Master finances</span></label>
+    </div>
+
+    <div id="ob-error" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.5);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:14px;"></div>
+
+    <button class="btn btn-primary btn-full" id="ob-submit" onclick="submitOnboarding()"
+      style="padding:14px;font-size:16px;gap:8px;">
+      <span id="ob-btn-text">Get Started →</span>
+      <div id="ob-btn-spinner" class="spinner" style="width:18px;height:18px;border-width:2px;display:none;"></div>
+    </button>
+  </div>
+</div>
+
+<!-- Save Indicator -->
+<div id="save-indicator">
+  <div class="save-dot" id="save-dot"></div>
+  <span id="save-label">Saving...</span>
+</div>
 
 <!-- Toast Container -->
 <div id="toast-container"></div>
 
 <!-- App Shell -->
-<div id="app">
+<div id="app" style="display:none;">
   <div id="sections">
 
     <!-- ══════════════════ PEAK ══════════════════ -->
@@ -872,10 +1054,13 @@
         <div style="display:flex;align-items:center;gap:14px;">
           <div style="width:48px;height:48px;border-radius:50%;background:var(--purple-dim);border:2px solid var(--purple);display:flex;align-items:center;justify-content:center;font-size:22px;">🧠</div>
           <div>
-            <div style="font-weight:700;font-size:16px;">Jayden's Mentor</div>
-            <div class="tiny muted">Powered by Claude AI</div>
+            <div style="font-weight:700;font-size:16px;" id="mentor-title">Your Mentor</div>
+            <div class="tiny muted" id="mentor-subtitle">Powered by Claude AI</div>
           </div>
-          <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="openApiKeyModal()">⚙️ API Key</button>
+          <div style="margin-left:auto;display:flex;gap:6px;">
+            <button class="btn btn-ghost btn-sm" onclick="openApiKeyModal()">⚙️ Key</button>
+            <button class="btn btn-ghost btn-sm" onclick="signOut()" style="color:var(--red);border-color:rgba(239,68,68,.3);">↪ Out</button>
+          </div>
         </div>
       </div>
 
@@ -995,9 +1180,19 @@
 <script>
 "use strict";
 
+// ── Supabase ───────────────────────────────────────────────────────────────
+const SB_URL = 'https://wgbbbtscfvbvpplfocal.supabase.co';
+const SB_KEY = 'sb_publishable_ikJiDmez-9PydJvoWhLoaw_VfOFoiX3';
+const { createClient } = supabase;
+const db = createClient(SB_URL, SB_KEY);
+
+let currentUser = null;
+let userProfile = null;
+let _authMode = 'signin';
+
 // ── State ──────────────────────────────────────────────────────────────────
 const STATE_KEY = 'lifemaxx_state';
-let S = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+let S = {};
 
 function defaultState() {
   return {
@@ -1028,15 +1223,386 @@ function defaultState() {
   };
 }
 
-// Merge defaults into state
-const defaults = defaultState();
-for (const k in defaults) {
-  if (!(k in S)) S[k] = defaults[k];
+function initState() {
+  S = defaultState();
 }
+
+// ── Save (localStorage cache + debounced Supabase sync) ───────────────────
+let _syncTimer = null;
+let _syncSaveTimer = null;
 
 function save() {
   localStorage.setItem(STATE_KEY, JSON.stringify(S));
+  if (currentUser) {
+    showSaveIndicator(false);
+    clearTimeout(_syncTimer);
+    _syncTimer = setTimeout(syncAll, 900);
+  }
 }
+
+// ── Save Indicator ─────────────────────────────────────────────────────────
+function showSaveIndicator(done) {
+  const el = document.getElementById('save-indicator');
+  const dot = document.getElementById('save-dot');
+  const lbl = document.getElementById('save-label');
+  if (!el) return;
+  el.classList.add('visible');
+  if (done) {
+    dot.classList.add('synced');
+    lbl.textContent = 'Saved ✓';
+    clearTimeout(_syncSaveTimer);
+    _syncSaveTimer = setTimeout(() => el.classList.remove('visible'), 2000);
+  } else {
+    dot.classList.remove('synced');
+    lbl.textContent = 'Saving...';
+  }
+}
+
+// ── Supabase Sync (all tables) ─────────────────────────────────────────────
+async function syncAll() {
+  if (!currentUser) return;
+  const uid = currentUser.id;
+  try {
+    await Promise.all([
+      syncVitals(uid),
+      syncCaffeineToDb(uid),
+      syncWater(uid),
+      syncSupplements(uid),
+      syncStimulants(uid),
+      syncMood(uid),
+      syncWorkouts(uid),
+      syncGoals(uid),
+      syncFinance(uid),
+      syncUserSettings(uid),
+    ]);
+    showSaveIndicator(true);
+  } catch (e) {
+    console.error('Supabase sync error:', e);
+    showSaveIndicator(true);
+  }
+}
+
+async function syncVitals(uid) {
+  const today = new Date().toISOString().split('T')[0];
+  const { hrv, rhr, sleep, sleepQuality, wake } = S.vitals;
+  await db.from('vitals').upsert(
+    { user_id: uid, date: today, hrv: hrv||null, rhr: rhr||null,
+      sleep_hours: sleep||null, sleep_quality: sleepQuality||null, wake_time: wake||null },
+    { onConflict: 'user_id,date' }
+  );
+}
+
+async function syncCaffeineToDb(uid) {
+  const today = new Date().toISOString().split('T')[0];
+  await db.from('stimulants').delete()
+    .eq('user_id', uid).eq('category', 'caffeine')
+    .gte('taken_at', today + 'T00:00:00.000Z');
+  const todayEntries = S.caffeine.filter(c => c.ts.startsWith(today));
+  if (todayEntries.length) {
+    await db.from('stimulants').insert(
+      todayEntries.map(c => ({ user_id: uid, category: 'caffeine', type: 'Caffeine', dose_mg: c.mg, taken_at: c.ts }))
+    );
+  }
+}
+
+async function syncWater(uid) {
+  const today = new Date().toISOString().split('T')[0];
+  await db.from('water_log').upsert(
+    { user_id: uid, date: today, count: S.water, target: S.waterTarget },
+    { onConflict: 'user_id,date' }
+  );
+}
+
+async function syncSupplements(uid) {
+  await db.from('supplements').delete().eq('user_id', uid);
+  if (S.supplements.length) {
+    await db.from('supplements').insert(
+      S.supplements.map((s, i) => ({ user_id: uid, name: s.name, time: s.time||null, done_date: s.doneDate||null, sort_order: i }))
+    );
+  }
+}
+
+async function syncStimulants(uid) {
+  const today = new Date().toISOString().split('T')[0];
+  await db.from('stimulants').delete()
+    .eq('user_id', uid).eq('category', 'stimulant')
+    .gte('taken_at', today + 'T00:00:00.000Z');
+  const todayStims = S.stimulants.filter(s => s.ts.startsWith(today));
+  if (todayStims.length) {
+    await db.from('stimulants').insert(
+      todayStims.map(s => ({ user_id: uid, category: 'stimulant', type: s.type, dose_mg: s.dose||0, taken_at: s.ts }))
+    );
+  }
+}
+
+async function syncMood(uid) {
+  if (!S.mood) return;
+  await db.from('mood_log').upsert(
+    { user_id: uid, mood: S.mood.mood, stress: S.mood.stress, notes: S.mood.notes||'', logged_at: S.mood.ts },
+    { onConflict: 'user_id,logged_at' }
+  );
+}
+
+async function syncWorkouts(uid) {
+  if (!S.workoutHistory.length) return;
+  await db.from('workouts').upsert(
+    S.workoutHistory.map(w => ({
+      user_id: uid, date: w.date, split: w.split,
+      duration_mins: w.duration||0, exercises: w.exercises||[]
+    })),
+    { onConflict: 'user_id,date' }
+  );
+}
+
+async function syncGoals(uid) {
+  await db.from('goals').delete().eq('user_id', uid);
+  if (S.goals.length) {
+    await db.from('goals').insert(
+      S.goals.map(g => ({
+        user_id: uid, local_id: g.id, title: g.title, type: g.type,
+        deadline: g.deadline||null, done: !!g.done, done_date: g.doneDate||null, progress: g.progress||0
+      }))
+    );
+  }
+}
+
+async function syncFinance(uid) {
+  await db.from('finance_accounts').delete().eq('user_id', uid);
+  if (S.accounts.length) {
+    await db.from('finance_accounts').insert(
+      S.accounts.map((a, i) => ({ user_id: uid, name: a.name, type: a.type, balance: a.balance, sort_order: i }))
+    );
+  }
+  await db.from('subscriptions').delete().eq('user_id', uid);
+  if (S.subscriptions.length) {
+    await db.from('subscriptions').insert(
+      S.subscriptions.map((s, i) => ({ user_id: uid, name: s.name, amount: s.amount, billing_day: s.day, sort_order: i }))
+    );
+  }
+}
+
+async function syncUserSettings(uid) {
+  await db.from('user_settings').upsert(
+    { user_id: uid, settings: {
+      connections: S.connections, schedule: S.schedule, orders: S.orders,
+      wishlist: S.wishlist, ideas: S.ideas, chatHistory: S.chatHistory,
+      extraContext: S.extraContext, currentSplit: S.currentSplit,
+      dailyStreak: S.dailyStreak, lastDailyDate: S.lastDailyDate,
+      exercises: S.exercises, workoutActive: S.workoutActive, workoutStart: S.workoutStart,
+    }},
+    { onConflict: 'user_id' }
+  );
+}
+
+// ── Load all data from Supabase ────────────────────────────────────────────
+async function loadAllData(uid) {
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    const [
+      { data: vitalsRow },
+      { data: stimRows },
+      { data: waterRow },
+      { data: suppRows },
+      { data: moodRow },
+      { data: workoutRows },
+      { data: goalRows },
+      { data: accRows },
+      { data: subRows },
+      { data: settingsRow },
+      { data: profileRow },
+    ] = await Promise.all([
+      db.from('vitals').select('*').eq('user_id', uid).eq('date', today).maybeSingle(),
+      db.from('stimulants').select('*').eq('user_id', uid).gte('taken_at', today + 'T00:00:00.000Z'),
+      db.from('water_log').select('*').eq('user_id', uid).eq('date', today).maybeSingle(),
+      db.from('supplements').select('*').eq('user_id', uid).order('sort_order'),
+      db.from('mood_log').select('*').eq('user_id', uid).order('logged_at', { ascending: false }).limit(1).maybeSingle(),
+      db.from('workouts').select('*').eq('user_id', uid).order('date', { ascending: false }).limit(30),
+      db.from('goals').select('*').eq('user_id', uid),
+      db.from('finance_accounts').select('*').eq('user_id', uid).order('sort_order'),
+      db.from('subscriptions').select('*').eq('user_id', uid).order('sort_order'),
+      db.from('user_settings').select('*').eq('user_id', uid).maybeSingle(),
+      db.from('profiles').select('*').eq('user_id', uid).maybeSingle(),
+    ]);
+
+    if (vitalsRow) {
+      S.vitals = { hrv: vitalsRow.hrv, rhr: vitalsRow.rhr, sleep: vitalsRow.sleep_hours,
+        sleepQuality: vitalsRow.sleep_quality, wake: vitalsRow.wake_time };
+    }
+    if (stimRows) {
+      S.caffeine   = stimRows.filter(r => r.category === 'caffeine').map(r => ({ mg: r.dose_mg, ts: r.taken_at }));
+      S.stimulants = stimRows.filter(r => r.category === 'stimulant').map(r => ({ type: r.type, dose: r.dose_mg, ts: r.taken_at }));
+    }
+    if (waterRow)   { S.water = waterRow.count||0; S.waterTarget = waterRow.target||8; }
+    if (suppRows)   { S.supplements = suppRows.map(r => ({ name: r.name, time: r.time||'', doneDate: r.done_date||'' })); }
+    if (moodRow)    { S.mood = { mood: moodRow.mood, stress: moodRow.stress, notes: moodRow.notes||'', ts: moodRow.logged_at }; }
+    if (workoutRows){ S.workoutHistory = workoutRows.map(r => ({ date: r.date, split: r.split, duration: r.duration_mins, exercises: r.exercises||[] })); }
+    if (goalRows)   { S.goals = goalRows.map(r => ({ id: r.local_id||Date.now(), title: r.title, type: r.type, deadline: r.deadline||'', done: r.done, doneDate: r.done_date||'', progress: r.progress||0 })); }
+    if (accRows)    { S.accounts = accRows.map(r => ({ name: r.name, type: r.type, balance: r.balance })); }
+    if (subRows)    { S.subscriptions = subRows.map(r => ({ name: r.name, amount: r.amount, day: r.billing_day })); }
+
+    if (settingsRow?.settings) {
+      const c = settingsRow.settings;
+      Object.assign(S, {
+        connections: c.connections||{}, schedule: c.schedule||[], orders: c.orders||[],
+        wishlist: c.wishlist||[], ideas: c.ideas||[], chatHistory: c.chatHistory||[],
+        extraContext: c.extraContext||'', currentSplit: c.currentSplit||'',
+        dailyStreak: c.dailyStreak||0, lastDailyDate: c.lastDailyDate||'',
+        exercises: c.exercises||[], workoutActive: c.workoutActive||false, workoutStart: c.workoutStart||null,
+      });
+    }
+    if (profileRow) {
+      userProfile = profileRow;
+      setGreetingName(profileRow.name);
+    }
+    localStorage.setItem(STATE_KEY, JSON.stringify(S));
+  } catch (e) {
+    console.error('Error loading from Supabase, using cache:', e);
+    const cached = localStorage.getItem(STATE_KEY);
+    if (cached) try { Object.assign(S, JSON.parse(cached)); } catch {}
+  }
+}
+
+function setGreetingName(name) {
+  const el = document.getElementById('peak-greeting');
+  if (!el || !name) return;
+  const h = new Date().getHours();
+  el.textContent = `${h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'}, ${name}`;
+  const titleEl = document.getElementById('mentor-title');
+  if (titleEl) titleEl.textContent = `${name}'s Mentor`;
+}
+
+// ── Screen helpers ─────────────────────────────────────────────────────────
+function showLoadingScreen()   {
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('onboarding-screen').classList.remove('visible');
+  document.getElementById('app').style.display = 'none';
+}
+function showAuthScreen()   {
+  document.getElementById('loading-overlay').classList.add('hidden');
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('onboarding-screen').classList.remove('visible');
+  document.getElementById('app').style.display = 'none';
+}
+function showOnboardingScreen() {
+  document.getElementById('loading-overlay').classList.add('hidden');
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('onboarding-screen').classList.add('visible');
+  document.getElementById('app').style.display = 'none';
+}
+function showAppScreen() {
+  document.getElementById('loading-overlay').classList.add('hidden');
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('onboarding-screen').classList.remove('visible');
+  document.getElementById('app').style.display = 'flex';
+}
+
+// ── Auth UI ────────────────────────────────────────────────────────────────
+function switchAuthTab(mode) {
+  _authMode = mode;
+  document.getElementById('auth-tab-signin').classList.toggle('active', mode === 'signin');
+  document.getElementById('auth-tab-signup').classList.toggle('active', mode === 'signup');
+  document.getElementById('auth-btn-text').textContent = mode === 'signin' ? 'Sign In' : 'Create Account';
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+async function submitAuth() {
+  const email    = (document.getElementById('auth-email').value || '').trim();
+  const password = document.getElementById('auth-password').value || '';
+  const errEl    = document.getElementById('auth-error');
+  if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display = 'block'; return; }
+
+  document.getElementById('auth-btn-text').style.display = 'none';
+  document.getElementById('auth-btn-spinner').style.display = 'block';
+  document.getElementById('auth-submit').disabled = true;
+  errEl.style.display = 'none';
+
+  try {
+    const fn = _authMode === 'signin'
+      ? db.auth.signInWithPassword({ email, password })
+      : db.auth.signUp({ email, password });
+    const { error } = await fn;
+    if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; }
+  } catch (e) {
+    errEl.textContent = 'Network error. Check your connection.';
+    errEl.style.display = 'block';
+  } finally {
+    document.getElementById('auth-btn-text').style.display = '';
+    document.getElementById('auth-btn-spinner').style.display = 'none';
+    document.getElementById('auth-submit').disabled = false;
+  }
+}
+
+async function signOut() {
+  await db.auth.signOut();
+  currentUser = null; userProfile = null;
+  initState();
+  localStorage.removeItem(STATE_KEY);
+  showAuthScreen();
+  toast('Signed out', 'info');
+}
+
+// ── Onboarding submit ──────────────────────────────────────────────────────
+async function submitOnboarding() {
+  const name   = (document.getElementById('ob-name').value || '').trim();
+  const errEl  = document.getElementById('ob-error');
+  if (!name) { errEl.textContent = 'Please enter your name.'; errEl.style.display = 'block'; return; }
+
+  document.getElementById('ob-btn-text').style.display = 'none';
+  document.getElementById('ob-btn-spinner').style.display = 'block';
+  document.getElementById('ob-submit').disabled = true;
+  errEl.style.display = 'none';
+
+  const goals = [...document.querySelectorAll('#onboarding-screen input[type=checkbox]:checked')].map(c => c.value);
+  try {
+    const { error } = await db.from('profiles').insert({
+      user_id: currentUser.id,
+      name,
+      age:   parseInt(document.getElementById('ob-age').value)    || null,
+      gender: document.getElementById('ob-gender').value,
+      weight_kg: parseFloat(document.getElementById('ob-weight').value) || null,
+      height_cm: parseFloat(document.getElementById('ob-height').value) || null,
+      wake_time:  document.getElementById('ob-wake').value,
+      sleep_time: document.getElementById('ob-sleep-time').value,
+      weekly_training_hours: parseFloat(document.getElementById('ob-training').value) || null,
+      daily_caffeine_mg: parseInt(document.getElementById('ob-caffeine-goal').value)  || null,
+      primary_goals: goals,
+    });
+    if (error) throw error;
+    userProfile = { name };
+    setGreetingName(name);
+    showAppScreen();
+    initTheme();
+    renderPeak();
+    toast(`Welcome to Lifemaxx, ${name}! 🚀`);
+  } catch (e) {
+    errEl.textContent = e.message || 'Error saving profile. Try again.';
+    errEl.style.display = 'block';
+  } finally {
+    document.getElementById('ob-btn-text').style.display = '';
+    document.getElementById('ob-btn-spinner').style.display = 'none';
+    document.getElementById('ob-submit').disabled = false;
+  }
+}
+
+// ── Auth state listener ────────────────────────────────────────────────────
+db.auth.onAuthStateChange(async (event, session) => {
+  if (session?.user) {
+    currentUser = session.user;
+    initState();
+    const { data: profile } = await db.from('profiles').select('name').eq('user_id', currentUser.id).maybeSingle();
+    if (!profile) {
+      showOnboardingScreen();
+    } else {
+      await loadAllData(currentUser.id);
+      showAppScreen();
+      initTheme();
+      renderPeak();
+    }
+  } else {
+    showAuthScreen();
+  }
+});
 
 // ── Toast ──────────────────────────────────────────────────────────────────
 function toast(msg, type = 'success') {
@@ -1082,7 +1648,8 @@ function updateClock() {
   const h = now.getHours();
   const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   const el = document.getElementById('peak-greeting');
-  if (el) el.textContent = `${greeting}, Jayden`;
+  const name = userProfile?.name || 'Jayden';
+  if (el) el.textContent = `${greeting}, ${name}`;
 
   const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const dateStr = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
@@ -2293,15 +2860,10 @@ function formatCurrency(n) {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 (function init() {
+  initState();
   initTheme();
-  renderPeak();
-  // Restore water ring on init
-  const arc = document.getElementById('water-ring-arc');
-  if (arc) {
-    const pct = Math.min(1, S.water / S.waterTarget);
-    const circ = 2 * Math.PI * 50;
-    arc.style.strokeDashoffset = circ * (1 - pct);
-  }
+  showLoadingScreen();
+  // Auth state listener above handles the rest after session check
 })();
 </script>
 </body>
