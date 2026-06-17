@@ -1506,30 +1506,41 @@ function switchAuthTab(mode) {
   document.getElementById('auth-error').style.display = 'none';
 }
 
+function _authBtnLoading(on) {
+  document.getElementById('auth-btn-text').style.display    = on ? 'none' : '';
+  document.getElementById('auth-btn-spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('auth-submit').disabled = on;
+}
+
 async function submitAuth() {
   const email    = (document.getElementById('auth-email').value || '').trim();
   const password = document.getElementById('auth-password').value || '';
   const errEl    = document.getElementById('auth-error');
   if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display = 'block'; return; }
 
-  document.getElementById('auth-btn-text').style.display = 'none';
-  document.getElementById('auth-btn-spinner').style.display = 'block';
-  document.getElementById('auth-submit').disabled = true;
+  _authBtnLoading(true);
   errEl.style.display = 'none';
 
+  const authCall = _authMode === 'signin'
+    ? db.auth.signInWithPassword({ email, password })
+    : db.auth.signUp({ email, password });
+
+  const timeout = new Promise((_, rej) =>
+    setTimeout(() => rej(new Error('Connection slow, try again')), 5000)
+  );
+
   try {
-    const fn = _authMode === 'signin'
-      ? db.auth.signInWithPassword({ email, password })
-      : db.auth.signUp({ email, password });
-    const { error } = await fn;
-    if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; }
+    const { error } = await Promise.race([authCall, timeout]);
+    if (error) {
+      errEl.textContent = error.message;
+      errEl.style.display = 'block';
+      _authBtnLoading(false);
+    }
+    // On success: keep spinner — onAuthStateChange SIGNED_IN shows the app and resets it
   } catch (e) {
-    errEl.textContent = 'Network error. Check your connection.';
+    errEl.textContent = e.message || 'Network error. Check your connection.';
     errEl.style.display = 'block';
-  } finally {
-    document.getElementById('auth-btn-text').style.display = '';
-    document.getElementById('auth-btn-spinner').style.display = 'none';
-    document.getElementById('auth-submit').disabled = false;
+    _authBtnLoading(false);
   }
 }
 
@@ -1595,17 +1606,19 @@ db.auth.onAuthStateChange(async (event, session) => {
         // App already visible — refresh data silently in the background
         backgroundRefresh(session.user.id);
       } else {
-        // No cached state — load data, then show
+        // Session exists but no local cache — show app instantly, load data behind the scenes
         initState();
         const { data: profile } = await db.from('profiles').select('name').eq('user_id', currentUser.id).maybeSingle();
         _fastShowDone = true;
         if (!profile) {
           showOnboardingScreen();
         } else {
-          await loadAllData(currentUser.id);
+          userProfile = profile;
+          setGreetingName(profile.name);
           showAppScreen();
           initTheme();
           renderPeak();
+          backgroundRefresh(currentUser.id);
         }
       }
     } else if (!_fastShowDone) {
@@ -1614,18 +1627,25 @@ db.auth.onAuthStateChange(async (event, session) => {
       showAuthScreen();
     }
   } else if (event === 'SIGNED_IN') {
-    // Fresh sign-in from the auth form
+    // Fresh sign-in — show the app immediately, load data behind the scenes
     currentUser = session.user;
     initState();
-    const { data: profile } = await db.from('profiles').select('name').eq('user_id', currentUser.id).maybeSingle();
     _fastShowDone = true;
+    _authBtnLoading(false); // reset the auth form spinner
+
+    // Quick profile check (name only — one tiny query)
+    const { data: profile } = await db.from('profiles').select('name').eq('user_id', currentUser.id).maybeSingle();
     if (!profile) {
       showOnboardingScreen();
     } else {
-      await loadAllData(currentUser.id);
+      // Show app instantly with empty state, then populate in background
+      userProfile = profile;
+      setGreetingName(profile.name);
       showAppScreen();
       initTheme();
       renderPeak();
+      // Load all real data without blocking the UI
+      backgroundRefresh(currentUser.id);
     }
   } else if (event === 'SIGNED_OUT') {
     _fastShowDone = false;
