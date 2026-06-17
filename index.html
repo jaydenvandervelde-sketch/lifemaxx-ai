@@ -453,10 +453,37 @@
 
     /* ─── Supplement flashing ──────────────────────────── */
     @keyframes flash-supp {
-      0%, 100% { background: var(--card); }
-      50%       { background: rgba(239,68,68,.08); border-color: var(--red); }
+      0%, 100% { background: transparent; border-color: transparent; box-shadow: none; }
+      50%       { background: rgba(239,68,68,.11); border-color: var(--red); box-shadow: 0 0 10px rgba(239,68,68,.22); }
     }
-    .supp-missed { animation: flash-supp 2s ease-in-out infinite; }
+    .supp-missed {
+      animation: flash-supp 1.5s ease-in-out infinite;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding-left: 8px;
+      padding-right: 8px;
+      margin-left: -8px;
+      margin-right: -8px;
+    }
+
+    /* ─── Light Mode ────────────────────────────────────── */
+    html.light {
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --card2: #ececef;
+      --border: #d8d8dd;
+      --text: #1a1a1a;
+      --text-muted: #5a5a6e;
+      --text-dim: #9999aa;
+      --purple-dim: rgba(124,58,237,0.1);
+      --purple-glow: rgba(124,58,237,0.25);
+    }
+    html.light #nav {
+      background: rgba(245,245,247,0.95);
+    }
+    html.light .section-header {
+      background: var(--bg);
+    }
   </style>
 </head>
 <body>
@@ -476,7 +503,8 @@
             <h2 id="peak-greeting">Good morning, Jayden</h2>
             <div class="small muted" id="peak-datetime">Tuesday, June 17</div>
           </div>
-          <div style="text-align:right;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button id="theme-toggle" onclick="toggleTheme()" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:17px;cursor:pointer;line-height:1;">☀️</button>
             <div style="font-size:13px;color:var(--text-muted);" id="peak-clock">—</div>
           </div>
         </div>
@@ -1066,6 +1094,23 @@ function updateClock() {
 setInterval(updateClock, 30000);
 updateClock();
 
+// ── Theme ──────────────────────────────────────────────────────────────────
+function initTheme() {
+  const saved = localStorage.getItem('lifemaxx_theme');
+  if (saved === 'light') applyTheme('light');
+  else applyTheme('dark');
+}
+function applyTheme(mode) {
+  document.documentElement.classList.toggle('light', mode === 'light');
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = mode === 'light' ? '🌙' : '☀️';
+  localStorage.setItem('lifemaxx_theme', mode);
+}
+function toggleTheme() {
+  const isLight = document.documentElement.classList.contains('light');
+  applyTheme(isLight ? 'dark' : 'light');
+}
+
 // ── Peak Score ─────────────────────────────────────────────────────────────
 function calcPeakScore() {
   const v = S.vitals;
@@ -1160,33 +1205,51 @@ function generateEnergyData() {
 
 let energyChart = null;
 function renderEnergyChart() {
-  const ctx = document.getElementById('energyChart');
-  if (!ctx) return;
+  const canvas = document.getElementById('energyChart');
+  if (!canvas) return;
   const { labels, data } = generateEnergyData();
   if (energyChart) energyChart.destroy();
-  energyChart = new Chart(ctx, {
+  const ctx2d = canvas.getContext('2d');
+  const h = canvas.offsetHeight || 130;
+  const grad = ctx2d.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0,   'rgba(157,92,240,0.52)');
+  grad.addColorStop(0.55,'rgba(124,58,237,0.14)');
+  grad.addColorStop(1,   'rgba(124,58,237,0)');
+  energyChart = new Chart(canvas, {
     type: 'line',
     data: {
       labels,
       datasets: [{
         data,
-        borderColor: '#7C3AED',
-        backgroundColor: 'rgba(124,58,237,0.12)',
+        borderColor: '#9D5CF0',
+        backgroundColor: grad,
         fill: true,
-        tension: 0.45,
+        tension: 0.5,
+        cubicInterpolationMode: 'monotone',
         pointRadius: 0,
-        borderWidth: 2.5,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: '#7C3AED',
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2,
+        borderWidth: 3,
+        borderCapStyle: 'round',
+        borderJoinStyle: 'round',
       }]
     },
     options: {
       responsive: true,
       plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: 'rgba(10,10,10,0.92)',
+        borderColor: '#333',
+        borderWidth: 1,
+        padding: 10,
         callbacks: { label: c => ` Energy: ${c.raw}%` }
       }},
       scales: {
         x: { grid: { color: '#1e1e1e' }, ticks: { color: '#666', font: { size: 10 } } },
         y: { grid: { color: '#1e1e1e' }, ticks: { color: '#666', font: { size: 10 } }, min: 0, max: 100 }
-      }
+      },
+      animation: { duration: 700, easing: 'easeInOutQuart' },
     }
   });
 }
@@ -1477,7 +1540,9 @@ function addSupplement() {
 }
 function toggleSupp(i) {
   const today = new Date().toDateString();
-  S.supplements[i].doneDate = S.supplements[i].doneDate === today ? '' : today;
+  const marking = S.supplements[i].doneDate !== today;
+  S.supplements[i].doneDate = marking ? today : '';
+  if (marking) haptic(10);
   save(); renderSupplements();
 }
 function removeSupp(i) { S.supplements.splice(i, 1); save(); renderSupplements(); }
@@ -1613,7 +1678,9 @@ function updateSet(exIdx, setIdx, field, value) {
 }
 
 function toggleSetDone(exIdx, setIdx) {
-  S.exercises[exIdx].sets[setIdx].done = !S.exercises[exIdx].sets[setIdx].done;
+  const marking = !S.exercises[exIdx].sets[setIdx].done;
+  S.exercises[exIdx].sets[setIdx].done = marking;
+  if (marking) haptic(8);
   save(); renderExercises();
 }
 
@@ -1691,14 +1758,36 @@ function renderWorkoutHistory() {
 
 // ── Finance ────────────────────────────────────────────────────────────────
 let netWorthChart = null;
+let _nwRaf = null;
 
 function getNetWorth() {
   return S.accounts.reduce((s, a) => s + (a.type === 'debt' ? -a.balance : +a.balance), 0);
 }
 
+function countUpNetWorth(target) {
+  const el = document.getElementById('net-worth-display');
+  if (!el) return;
+  if (_nwRaf) cancelAnimationFrame(_nwRaf);
+  const duration = 900;
+  const t0 = performance.now();
+  // Parse currently displayed value as start
+  const raw = el.textContent.replace(/[^0-9.-]/g, '');
+  let from = parseFloat(raw) || 0;
+  if (el.textContent.includes('k')) from *= 1000;
+  if (el.textContent.includes('M')) from *= 1000000;
+  function tick(now) {
+    const p = Math.min(1, (now - t0) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = formatCurrency(from + (target - from) * eased);
+    if (p < 1) _nwRaf = requestAnimationFrame(tick);
+    else { el.textContent = formatCurrency(target); _nwRaf = null; }
+  }
+  _nwRaf = requestAnimationFrame(tick);
+}
+
 function renderFinance() {
   const nw = getNetWorth();
-  document.getElementById('net-worth-display').textContent = formatCurrency(nw);
+  countUpNetWorth(nw);
   document.getElementById('net-worth-sub').textContent = `${S.accounts.length} account${S.accounts.length !== 1 ? 's' : ''} tracked`;
 
   // Pie
@@ -1877,7 +1966,10 @@ function saveGoal() {
 
 function toggleGoalDone(id) {
   const g = S.goals.find(g => g.id === id);
-  if (g) { g.done = !g.done; save(); renderGoals(); }
+  if (!g) return;
+  g.done = !g.done;
+  if (g.done) haptic([8, 60, 14]);
+  save(); renderGoals();
 }
 
 function removeGoal(id) {
@@ -1947,7 +2039,9 @@ function toggleDailyGoal(id) {
   const g = S.goals.find(g => g.id === id);
   if (!g) return;
   const today = new Date().toDateString();
-  g.doneDate = g.doneDate === today ? '' : today;
+  const marking = g.doneDate !== today;
+  g.doneDate = marking ? today : '';
+  if (marking) haptic(12);
   save(); renderGoals();
 }
 
@@ -2176,6 +2270,11 @@ async function extractContext() {
   }
 }
 
+// ── Haptic ─────────────────────────────────────────────────────────────────
+function haptic(pattern = 10) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
 // ── Utilities ──────────────────────────────────────────────────────────────
 function escHtml(s) {
   if (!s) return '';
@@ -2194,6 +2293,7 @@ function formatCurrency(n) {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 (function init() {
+  initTheme();
   renderPeak();
   // Restore water ring on init
   const arc = document.getElementById('water-ring-arc');
