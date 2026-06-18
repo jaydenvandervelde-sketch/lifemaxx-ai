@@ -514,26 +514,126 @@
     }
     #loading-overlay.hidden { display: none; }
 
-    /* ─── Auth Screen ──────────────────────────────────── */
-    #auth-screen {
-      position: fixed; inset: 0; background: var(--bg); z-index: 500;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 24px; overflow-y: auto;
+    /* ─── Auth Flow ────────────────────────────────────────── */
+    #auth-flow {
+      position: fixed; inset: 0; background: var(--bg); z-index: 500; overflow: hidden;
     }
-    #auth-screen.hidden { display: none; }
+    #auth-flow.hidden { display: none; }
 
-    /* ─── Onboarding ───────────────────────────────────── */
-    #onboarding-screen {
-      position: fixed; inset: 0; background: var(--bg); z-index: 500;
-      overflow-y: auto; padding: 24px; display: none;
+    .auth-slide {
+      position: absolute; inset: 0;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 0 24px;
+      display: flex; flex-direction: column;
+      transition: transform 0.38s cubic-bezier(0.4,0,0.2,1);
+      will-change: transform;
     }
-    #onboarding-screen.visible { display: block; }
-    .ob-goal-label {
-      display: flex; align-items: center; gap: 12px;
-      padding: 11px 0; border-bottom: 1px solid var(--border); cursor: pointer;
+    .auth-slide.slide-left   { transform: translateX(-100%); pointer-events: none; }
+    .auth-slide.slide-right  { transform: translateX(100%);  pointer-events: none; }
+    .auth-slide.slide-center { transform: translateX(0); }
+
+    .ob-progress-bar {
+      height: 3px; background: var(--border); border-radius: 2px;
+      margin-bottom: 28px; overflow: hidden;
     }
-    .ob-goal-label:last-child { border-bottom: none; }
-    .ob-goal-label input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--purple); flex-shrink: 0; }
+    .ob-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--purple), var(--purple-light));
+      border-radius: 2px;
+      transition: width 0.45s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    @keyframes welcomeFadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .welcome-fade-in { animation: welcomeFadeIn 0.6s ease forwards; }
+
+    .auth-btn {
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      width: 100%; padding: 16px; border-radius: 14px;
+      font-size: 16px; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.18s;
+      -webkit-tap-highlight-color: transparent;
+      margin-bottom: 12px; letter-spacing: -0.2px;
+    }
+    .auth-btn-google { background: #fff; color: #1a1a1a; }
+    .auth-btn-apple  { background: #111; color: #fff; border: 1px solid #333; }
+    .auth-btn-email  { background: transparent; color: var(--purple-light); border: 2px solid var(--purple); }
+    .auth-btn:active { transform: scale(0.97); opacity: 0.88; }
+
+    .pill-selector { display: flex; gap: 8px; }
+    .pill-btn {
+      flex: 1; padding: 10px; border-radius: 50px; font-size: 14px; font-weight: 600;
+      cursor: pointer; border: 2px solid var(--border);
+      background: var(--card2); color: var(--text-muted);
+      transition: all 0.18s; -webkit-tap-highlight-color: transparent; text-align: center;
+    }
+    .pill-btn.active { border-color: var(--purple); background: var(--purple-dim); color: var(--purple-light); }
+
+    .unit-toggle {
+      display: flex; background: var(--card2); border-radius: 50px; padding: 4px;
+      border: 1px solid var(--border); margin-bottom: 14px;
+    }
+    .unit-btn {
+      flex: 1; padding: 8px; border-radius: 50px; border: none;
+      background: none; color: var(--text-muted); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .unit-btn.active { background: var(--purple); color: #fff; box-shadow: 0 0 10px var(--purple-glow); }
+
+    .goal-cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .goal-card {
+      background: var(--card); border: 2px solid var(--border);
+      border-radius: 16px; padding: 18px 12px;
+      text-align: center; cursor: pointer;
+      transition: all 0.2s; -webkit-tap-highlight-color: transparent; user-select: none;
+    }
+    .goal-card:active { transform: scale(0.95); }
+    .goal-card.selected {
+      border-color: var(--purple); background: var(--purple-dim);
+      box-shadow: 0 0 20px rgba(124,58,237,.25);
+    }
+    .goal-card-icon { font-size: 28px; margin-bottom: 8px; }
+    .goal-card-label { font-size: 13px; font-weight: 600; }
+
+    @keyframes checkCircle {
+      from { stroke-dashoffset: 283; opacity: 0; }
+      to   { stroke-dashoffset: 0;   opacity: 1; }
+    }
+    @keyframes checkMark {
+      from { stroke-dashoffset: 200; opacity: 0; }
+      to   { stroke-dashoffset: 0;   opacity: 1; }
+    }
+    .check-svg-circle { animation: checkCircle 0.5s ease forwards 0.2s; stroke-dasharray: 283; stroke-dashoffset: 283; opacity: 0; }
+    .check-svg-mark   { animation: checkMark 0.4s ease forwards 0.7s; stroke-dasharray: 200; stroke-dashoffset: 200; opacity: 0; }
+
+    @keyframes btnPulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(124,58,237,.55), 0 0 16px var(--purple-glow); }
+      50%      { box-shadow: 0 0 0 14px rgba(124,58,237,.0), 0 0 16px var(--purple-glow); }
+    }
+    .btn-pulse-anim { animation: btnPulse 2.2s ease-in-out infinite; }
+
+    .back-btn {
+      background: none; border: none; color: var(--text-muted);
+      font-size: 22px; cursor: pointer; padding: 4px 8px; margin-left: -8px;
+      display: inline-flex; align-items: center; -webkit-tap-highlight-color: transparent;
+    }
+
+    .pw-strength { display: flex; gap: 4px; margin-top: 6px; }
+    .pw-strength-bar { flex: 1; height: 3px; border-radius: 2px; background: var(--border); transition: background 0.3s; }
+    .pw-bar-weak   { background: var(--red) !important; }
+    .pw-bar-good   { background: var(--yellow) !important; }
+    .pw-bar-strong { background: var(--green) !important; }
+    .pw-strength-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    .slider-value {
+      background: var(--purple-dim); border: 1px solid var(--purple);
+      border-radius: 8px; padding: 2px 10px;
+      font-size: 13px; font-weight: 700; color: var(--purple-light);
+      display: inline-block; margin-left: 8px;
+    }
+    .caffeine-label { font-size: 12px; color: var(--purple-light); font-weight: 600; margin-top: 6px; }
 
     /* ─── Spinner ──────────────────────────────────────── */
     .spinner {
@@ -630,120 +730,264 @@
   </div>
 </div>
 
-<!-- Auth Screen -->
-<div id="auth-screen" class="hidden">
-  <div style="width:100%;max-width:380px;">
-    <div style="text-align:center;margin-bottom:40px;">
-      <div style="font-size:52px;margin-bottom:14px;filter:drop-shadow(0 0 24px rgba(124,58,237,.6));">⚡</div>
-      <h1 style="margin-bottom:6px;">Lifemaxx AI</h1>
-      <p class="muted small">Your elite life optimization dashboard</p>
+<!-- Auth & Onboarding Flow -->
+<div id="auth-flow" class="hidden">
+
+  <!-- SLIDE 0: Welcome -->
+  <div class="auth-slide slide-center" id="slide-welcome">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:60px;padding-bottom:40px;" class="welcome-fade-in">
+      <div style="font-size:80px;text-align:center;margin-bottom:16px;filter:drop-shadow(0 0 32px rgba(124,58,237,.8));">⚡</div>
+      <h1 style="font-size:38px;font-weight:900;text-align:center;letter-spacing:-1.5px;">Lifemaxx AI</h1>
+      <p style="font-size:17px;color:var(--text-muted);text-align:center;margin-top:8px;margin-bottom:52px;">Your life. Optimised.</p>
     </div>
-    <div class="tabs">
-      <button class="tab-btn active" id="auth-tab-signin" onclick="switchAuthTab('signin')">Sign In</button>
-      <button class="tab-btn" id="auth-tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
+    <div style="width:100%;max-width:400px;margin:0 auto;padding-bottom:60px;">
+      <button class="auth-btn auth-btn-google" onclick="authGoogle()">
+        <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink:0;">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google
+      </button>
+      <button class="auth-btn auth-btn-apple" onclick="authApple()">
+        <svg width="18" height="22" viewBox="0 0 814 1000" fill="white" style="flex-shrink:0;">
+          <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-127.1c-42.9-80.8-79.6-206.5-79.6-324.7 0-228 148.4-349.2 295.3-349.2 73.5 0 133.9 48 179.4 48 43.3 0 112.4-51.7 195.7-51.7zm-190.2-75.7c35.3-37.1 60.2-86.5 60.2-135.9 0-6.5-.5-13-1.7-18.3-56.7 2.1-124.8 37.5-165.3 80.6-32.1 33.5-60 84.2-60 134.1 0 6.8 1.1 13.6 1.7 15.8 3.5.6 9.2 1.1 14.9 1.1 50.6 0 114.3-33.2 150.2-77.4z"/>
+        </svg>
+        Continue with Apple
+      </button>
+      <button class="auth-btn auth-btn-email" onclick="goToSlide('slide-signin')">
+        ✉ &nbsp;Continue with Email
+      </button>
+      <div style="text-align:center;margin-top:20px;">
+        <span style="font-size:14px;color:var(--text-muted);">Don't have an account? </span>
+        <button onclick="goToSlide('slide-signup')" style="background:none;border:none;color:var(--purple-light);font-size:14px;font-weight:600;cursor:pointer;padding:0;">Sign up</button>
+      </div>
     </div>
-    <div id="auth-error" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.5);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:14px;"></div>
-    <div class="input-group">
-      <label class="input-label">Email</label>
-      <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" />
-    </div>
-    <div class="input-group">
-      <label class="input-label">Password</label>
-      <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password"
-        onkeydown="if(event.key==='Enter')submitAuth()" />
-    </div>
-    <button class="btn btn-primary btn-full" id="auth-submit" onclick="submitAuth()"
-      style="margin-top:8px;padding:14px;font-size:16px;gap:8px;">
-      <span id="auth-btn-text">Sign In</span>
-      <div id="auth-btn-spinner" class="spinner" style="width:18px;height:18px;border-width:2px;display:none;"></div>
-    </button>
   </div>
-</div>
 
-<!-- Onboarding Screen -->
-<div id="onboarding-screen">
-  <div style="max-width:420px;margin:0 auto;padding-bottom:40px;">
-    <div style="text-align:center;margin-bottom:28px;padding-top:16px;">
-      <div style="font-size:38px;margin-bottom:10px;">⚡</div>
-      <h2 style="margin-bottom:4px;">Set Up Your Profile</h2>
-      <p class="muted small">Personalises your experience from day one</p>
+  <!-- SLIDE: Email Sign In -->
+  <div class="auth-slide slide-right" id="slide-signin">
+    <div style="padding-top:calc(env(safe-area-inset-top,0px) + 20px);margin-bottom:4px;">
+      <button class="back-btn" onclick="goBack()">&#8592;</button>
     </div>
-
-    <div class="card">
-      <div class="card-title">About You</div>
+    <div style="max-width:420px;width:100%;margin:0 auto;flex:1;display:flex;flex-direction:column;justify-content:center;padding-bottom:60px;">
+      <h2 style="margin-bottom:6px;">Welcome back</h2>
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:28px;">Sign in to your account</p>
+      <div id="signin-error" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.5);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:14px;"></div>
       <div class="input-group">
-        <label class="input-label">Your Name</label>
-        <input type="text" id="ob-name" placeholder="e.g. Jayden" />
+        <label class="input-label">Email</label>
+        <input type="email" id="signin-email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Password</label>
+        <input type="password" id="signin-password" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doSignIn()" />
+      </div>
+      <button class="btn btn-primary btn-full" id="signin-submit" onclick="doSignIn()" style="padding:16px;font-size:16px;border-radius:14px;margin-top:8px;gap:10px;">
+        <span id="signin-btn-text">Sign In</span>
+        <div id="signin-btn-spinner" class="spinner" style="width:18px;height:18px;border-width:2px;display:none;"></div>
+      </button>
+      <div style="text-align:center;margin-top:20px;">
+        <span style="font-size:14px;color:var(--text-muted);">Don't have an account? </span>
+        <button onclick="goToSlide('slide-signup')" style="background:none;border:none;color:var(--purple-light);font-size:14px;font-weight:600;cursor:pointer;padding:0;">Sign up</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 1: Create Account -->
+  <div class="auth-slide slide-right" id="slide-signup">
+    <div style="padding-top:calc(env(safe-area-inset-top,0px) + 20px);margin-bottom:4px;">
+      <button class="back-btn" onclick="goBack()">&#8592;</button>
+      <div class="ob-progress-bar" style="margin-top:12px;"><div class="ob-progress-fill" style="width:20%;"></div></div>
+    </div>
+    <div style="max-width:420px;width:100%;margin:0 auto;padding-bottom:60px;">
+      <h2 style="margin-bottom:4px;">Create your account</h2>
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">Step 1 of 5</p>
+      <div id="signup-error" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.5);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:14px;"></div>
+      <div class="input-group">
+        <label class="input-label">First Name</label>
+        <input type="text" id="ob-first-name" placeholder="e.g. Jayden" autocomplete="given-name" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Email</label>
+        <input type="email" id="ob-email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="input-group">
+        <label class="input-label">Password</label>
+        <input type="password" id="ob-password" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="new-password"
+          oninput="updatePasswordStrength()" />
+        <div class="pw-strength" id="pw-strength-bars">
+          <div class="pw-strength-bar" id="pw-bar-1"></div>
+          <div class="pw-strength-bar" id="pw-bar-2"></div>
+          <div class="pw-strength-bar" id="pw-bar-3"></div>
+        </div>
+        <div class="pw-strength-label" id="pw-strength-label"></div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Confirm Password</label>
+        <input type="password" id="ob-password-confirm" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter')continueSignup()" />
+      </div>
+      <button class="btn btn-primary btn-full" id="signup-submit" onclick="continueSignup()" style="padding:16px;font-size:16px;border-radius:14px;margin-top:8px;gap:10px;">
+        <span id="signup-btn-text">Continue &#x2192;</span>
+        <div id="signup-btn-spinner" class="spinner" style="width:18px;height:18px;border-width:2px;display:none;"></div>
+      </button>
+      <div style="text-align:center;margin-top:20px;">
+        <span style="font-size:14px;color:var(--text-muted);">Already have an account? </span>
+        <button onclick="goToSlide('slide-signin')" style="background:none;border:none;color:var(--purple-light);font-size:14px;font-weight:600;cursor:pointer;padding:0;">Sign in</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: Body Metrics -->
+  <div class="auth-slide slide-right" id="slide-body">
+    <div style="padding-top:calc(env(safe-area-inset-top,0px) + 20px);margin-bottom:4px;">
+      <button class="back-btn" onclick="goBack()">&#8592;</button>
+      <div class="ob-progress-bar" style="margin-top:12px;"><div class="ob-progress-fill" style="width:40%;"></div></div>
+    </div>
+    <div style="max-width:420px;width:100%;margin:0 auto;padding-bottom:60px;">
+      <h2 style="margin-bottom:4px;">Tell us about you</h2>
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">Used to calculate your water target and energy levels</p>
+      <div class="input-group">
+        <label class="input-label">Age</label>
+        <input type="number" id="ob2-age" placeholder="22" min="10" max="100" inputmode="numeric" />
+      </div>
+      <div class="input-group" style="margin-bottom:16px;">
+        <label class="input-label">Gender</label>
+        <div class="pill-selector">
+          <button class="pill-btn active" id="pill-male" onclick="selectGender('male')">Male</button>
+          <button class="pill-btn" id="pill-female" onclick="selectGender('female')">Female</button>
+          <button class="pill-btn" id="pill-other" onclick="selectGender('other')">Other</button>
+        </div>
+      </div>
+      <div class="input-group" style="margin-bottom:4px;">
+        <label class="input-label">Units</label>
+        <div class="unit-toggle">
+          <button class="unit-btn active" id="unit-metric" onclick="selectUnit('metric')">Metric (kg / cm)</button>
+          <button class="unit-btn" id="unit-imperial" onclick="selectUnit('imperial')">Imperial (lbs / ft)</button>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div class="input-group">
-          <label class="input-label">Age</label>
-          <input type="number" id="ob-age" placeholder="22" min="10" max="100" />
+          <label class="input-label" id="weight-label">Weight (kg)</label>
+          <input type="number" id="ob2-weight" placeholder="80" min="20" max="700" step="0.1" inputmode="decimal" />
         </div>
         <div class="input-group">
-          <label class="input-label">Gender</label>
-          <select id="ob-gender">
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-        <div class="input-group">
-          <label class="input-label">Weight (kg)</label>
-          <input type="number" id="ob-weight" placeholder="80" min="30" max="300" step="0.1" />
-        </div>
-        <div class="input-group">
-          <label class="input-label">Height (cm)</label>
-          <input type="number" id="ob-height" placeholder="180" min="100" max="250" />
+          <label class="input-label" id="height-label">Height (cm)</label>
+          <input type="number" id="ob2-height" placeholder="180" min="50" max="300" step="0.1" inputmode="decimal" />
         </div>
       </div>
+      <button class="btn btn-primary btn-full" onclick="continueBody()" style="padding:16px;font-size:16px;border-radius:14px;margin-top:8px;">Continue &#x2192;</button>
+      <div style="text-align:center;margin-top:16px;">
+        <button onclick="skipAndGoTo('slide-lifestyle')" style="background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;">Skip for now</button>
+      </div>
     </div>
+  </div>
 
-    <div class="card">
-      <div class="card-title">Sleep Schedule</div>
+  <!-- SLIDE 3: Lifestyle -->
+  <div class="auth-slide slide-right" id="slide-lifestyle">
+    <div style="padding-top:calc(env(safe-area-inset-top,0px) + 20px);margin-bottom:4px;">
+      <button class="back-btn" onclick="goBack()">&#8592;</button>
+      <div class="ob-progress-bar" style="margin-top:12px;"><div class="ob-progress-fill" style="width:60%;"></div></div>
+    </div>
+    <div style="max-width:420px;width:100%;margin:0 auto;padding-bottom:60px;">
+      <h2 style="margin-bottom:4px;">Your daily routine</h2>
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">This powers your Peak Tracker energy curve</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div class="input-group">
           <label class="input-label">Wake Time</label>
-          <input type="time" id="ob-wake" value="07:00" />
+          <input type="time" id="ob3-wake" value="07:00" />
         </div>
         <div class="input-group">
           <label class="input-label">Target Sleep Time</label>
-          <input type="time" id="ob-sleep-time" value="23:00" />
+          <input type="time" id="ob3-sleep" value="23:00" />
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Training & Habits</div>
-      <div class="input-group">
-        <label class="input-label">Weekly Training Hours</label>
-        <input type="number" id="ob-training" placeholder="5" min="0" max="40" step="0.5" />
+      <div class="input-group" style="margin-top:8px;">
+        <label class="input-label">Weekly Training Hours &nbsp;<span class="slider-value" id="ob3-training-val">5</span></label>
+        <input type="range" id="ob3-training" min="0" max="20" value="5" step="0.5"
+          oninput="document.getElementById('ob3-training-val').textContent=parseFloat(this.value)" style="margin-top:12px;" />
       </div>
-      <div class="input-group">
-        <label class="input-label">Daily Caffeine Intake (mg)</label>
-        <input type="number" id="ob-caffeine-goal" placeholder="200" min="0" max="1000" />
+      <div class="input-group" style="margin-top:16px;">
+        <label class="input-label">Daily Caffeine Intake &nbsp;<span class="slider-value" id="ob3-caff-val">200mg</span></label>
+        <input type="range" id="ob3-caffeine" min="0" max="600" value="200" step="25"
+          oninput="updateCaffeineLabel(this.value)" style="margin-top:12px;" />
+        <div class="caffeine-label" id="ob3-caff-label">Moderate</div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="continueLifestyle()" style="padding:16px;font-size:16px;border-radius:14px;margin-top:20px;">Continue &#x2192;</button>
+      <div style="text-align:center;margin-top:16px;">
+        <button onclick="skipAndGoTo('slide-goals')" style="background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;">Skip for now</button>
       </div>
     </div>
-
-    <div class="card">
-      <div class="card-title">Primary Goals</div>
-      <p class="small muted" style="margin-bottom:10px;">Select all that apply</p>
-      <label class="ob-goal-label"><input type="checkbox" value="Build muscle" /><span>Build muscle</span></label>
-      <label class="ob-goal-label"><input type="checkbox" value="Lose fat" /><span>Lose fat</span></label>
-      <label class="ob-goal-label"><input type="checkbox" value="Improve sleep" /><span>Improve sleep</span></label>
-      <label class="ob-goal-label"><input type="checkbox" value="Boost energy" /><span>Boost energy</span></label>
-      <label class="ob-goal-label"><input type="checkbox" value="Build a brand" /><span>Build a brand</span></label>
-      <label class="ob-goal-label"><input type="checkbox" value="Master finances" /><span>Master finances</span></label>
-    </div>
-
-    <div id="ob-error" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.5);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:14px;"></div>
-
-    <button class="btn btn-primary btn-full" id="ob-submit" onclick="submitOnboarding()"
-      style="padding:14px;font-size:16px;gap:8px;">
-      <span id="ob-btn-text">Get Started →</span>
-      <div id="ob-btn-spinner" class="spinner" style="width:18px;height:18px;border-width:2px;display:none;"></div>
-    </button>
   </div>
+
+  <!-- SLIDE 4: Primary Goals -->
+  <div class="auth-slide slide-right" id="slide-goals">
+    <div style="padding-top:calc(env(safe-area-inset-top,0px) + 20px);margin-bottom:4px;">
+      <button class="back-btn" onclick="goBack()">&#8592;</button>
+      <div class="ob-progress-bar" style="margin-top:12px;"><div class="ob-progress-fill" style="width:80%;"></div></div>
+    </div>
+    <div style="max-width:420px;width:100%;margin:0 auto;padding-bottom:60px;">
+      <h2 style="margin-bottom:4px;">What are you working towards?</h2>
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">Select all that apply</p>
+      <div class="goal-cards-grid">
+        <div class="goal-card" onclick="toggleGoalCard(this,'Build muscle')">
+          <div class="goal-card-icon">&#x1F4AA;</div>
+          <div class="goal-card-label">Build muscle</div>
+        </div>
+        <div class="goal-card" onclick="toggleGoalCard(this,'Lose fat')">
+          <div class="goal-card-icon">&#x1F525;</div>
+          <div class="goal-card-label">Lose fat</div>
+        </div>
+        <div class="goal-card" onclick="toggleGoalCard(this,'Improve sleep')">
+          <div class="goal-card-icon">&#x1F634;</div>
+          <div class="goal-card-label">Improve sleep</div>
+        </div>
+        <div class="goal-card" onclick="toggleGoalCard(this,'Boost energy')">
+          <div class="goal-card-icon">&#x26A1;</div>
+          <div class="goal-card-label">Boost energy</div>
+        </div>
+        <div class="goal-card" onclick="toggleGoalCard(this,'Build a brand')">
+          <div class="goal-card-icon">&#x1F4F1;</div>
+          <div class="goal-card-label">Build a brand</div>
+        </div>
+        <div class="goal-card" onclick="toggleGoalCard(this,'Master finances')">
+          <div class="goal-card-icon">&#x1F4B0;</div>
+          <div class="goal-card-label">Master finances</div>
+        </div>
+        <div class="goal-card" onclick="toggleGoalCard(this,'Mental clarity')">
+          <div class="goal-card-icon">&#x1F9E0;</div>
+          <div class="goal-card-label">Mental clarity</div>
+        </div>
+        <div class="goal-card" onclick="toggleGoalCard(this,'Athletic performance')">
+          <div class="goal-card-icon">&#x1F3C3;</div>
+          <div class="goal-card-label">Athletic performance</div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" id="goals-continue-btn" onclick="continueGoals()" style="padding:16px;font-size:16px;border-radius:14px;margin-top:16px;opacity:0.4;pointer-events:none;">Continue &#x2192;</button>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: All Set -->
+  <div class="auth-slide slide-right" id="slide-allset">
+    <div style="padding-top:calc(env(safe-area-inset-top,0px) + 20px);">
+      <div class="ob-progress-bar"><div class="ob-progress-fill" style="width:100%;"></div></div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:60px;text-align:center;max-width:420px;margin:0 auto;width:100%;">
+      <svg width="110" height="110" viewBox="0 0 110 110" style="margin-bottom:28px;">
+        <circle class="check-svg-circle" cx="55" cy="55" r="45" fill="none" stroke="var(--purple)" stroke-width="4"/>
+        <polyline class="check-svg-mark" points="32,57 47,72 78,40" fill="none" stroke="var(--purple)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h1 id="allset-name-heading" style="font-size:28px;font-weight:800;margin-bottom:10px;">You're all set!</h1>
+      <p style="font-size:16px;color:var(--text-muted);margin-bottom:44px;line-height:1.6;">Your Peak Tracker is ready. Let's go.</p>
+      <button class="btn btn-primary btn-full btn-pulse-anim" id="enter-app-btn" onclick="enterApp()" style="padding:18px;font-size:17px;border-radius:16px;gap:10px;">
+        <span id="enter-btn-text">Enter Lifemaxx AI &#x2192;</span>
+        <div id="enter-btn-spinner" class="spinner" style="width:18px;height:18px;border-width:2px;display:none;"></div>
+      </button>
+    </div>
+  </div>
+
 </div>
 
 <!-- Save Indicator -->
@@ -1347,7 +1591,6 @@ const db = createClient(SB_URL, SB_KEY);
 
 let currentUser = null;
 let userProfile = null;
-let _authMode = 'signin';
 
 // ── State ──────────────────────────────────────────────────────────────────
 const STATE_KEY = 'lifemaxx_state';
@@ -1630,132 +1873,375 @@ function setGreetingName(name) {
   if (titleEl) titleEl.textContent = `${name}'s Mentor`;
 }
 
-// ── Screen helpers ─────────────────────────────────────────────────────────
-function showLoadingScreen()   {
+// ── Slide navigation state ──────────────────────────────────────────────────
+let _currentSlide = 'slide-welcome';
+let _slideHistory = [];
+let _obData = { firstName:'', gender:'male', unitSystem:'metric', goals:[] };
+
+function goToSlide(id, skipHistory) {
+  const current = document.getElementById(_currentSlide);
+  const next    = document.getElementById(id);
+  if (!next || id === _currentSlide) return;
+
+  if (!skipHistory) _slideHistory.push(_currentSlide);
+
+  // animate out current: slide left
+  current.classList.remove('slide-center');
+  current.classList.add('slide-left');
+
+  // animate in next: comes from right → center
+  next.classList.remove('slide-right', 'slide-left');
+  next.classList.add('slide-center');
+
+  _currentSlide = id;
+
+  // Re-trigger allset checkmark animation when entering slide-allset
+  if (id === 'slide-allset') resetCheckmark();
+}
+
+function goBack() {
+  if (!_slideHistory.length) return;
+  const prev    = _slideHistory.pop();
+  const current = document.getElementById(_currentSlide);
+  const prevEl  = document.getElementById(prev);
+  if (!prevEl) return;
+
+  // animate out current: slide right
+  current.classList.remove('slide-center');
+  current.classList.add('slide-right');
+
+  // bring back prev: from left → center
+  prevEl.classList.remove('slide-left', 'slide-right');
+  prevEl.classList.add('slide-center');
+
+  _currentSlide = prev;
+}
+
+function resetCheckmark() {
+  const circle = document.querySelector('.check-svg-circle');
+  const mark   = document.querySelector('.check-svg-mark');
+  if (!circle || !mark) return;
+  [circle, mark].forEach(el => {
+    el.style.animation = 'none';
+    el.getBoundingClientRect(); // force reflow
+    el.style.animation = '';
+  });
+}
+
+function skipAndGoTo(id) {
+  goToSlide(id);
+}
+
+// ── Screen helpers ────────────────────────────────────────────────────────────
+function showLoadingScreen() {
   document.getElementById('loading-overlay').classList.remove('hidden');
-  document.getElementById('auth-screen').classList.add('hidden');
-  document.getElementById('onboarding-screen').classList.remove('visible');
+  document.getElementById('auth-flow').classList.add('hidden');
   document.getElementById('app').style.display = 'none';
 }
-function showAuthScreen()   {
+function showAuthScreen(slideId) {
   document.getElementById('loading-overlay').classList.add('hidden');
-  document.getElementById('auth-screen').classList.remove('hidden');
-  document.getElementById('onboarding-screen').classList.remove('visible');
   document.getElementById('app').style.display = 'none';
-}
-function showOnboardingScreen() {
-  document.getElementById('loading-overlay').classList.add('hidden');
-  document.getElementById('auth-screen').classList.add('hidden');
-  document.getElementById('onboarding-screen').classList.add('visible');
-  document.getElementById('app').style.display = 'none';
+
+  const flow = document.getElementById('auth-flow');
+  flow.classList.remove('hidden');
+
+  // Reset all slides to their initial positions
+  document.querySelectorAll('.auth-slide').forEach(el => {
+    el.classList.remove('slide-center', 'slide-left', 'slide-right');
+    el.classList.add('slide-right');
+  });
+
+  const targetId = slideId || 'slide-welcome';
+  const targetEl = document.getElementById(targetId);
+  if (targetEl) {
+    targetEl.classList.remove('slide-right');
+    targetEl.classList.add('slide-center');
+  }
+  _currentSlide = targetId;
+  _slideHistory = [];
 }
 function showAppScreen() {
   document.getElementById('loading-overlay').classList.add('hidden');
-  document.getElementById('auth-screen').classList.add('hidden');
-  document.getElementById('onboarding-screen').classList.remove('visible');
+  document.getElementById('auth-flow').classList.add('hidden');
   document.getElementById('app').style.display = 'flex';
 }
 
-// ── Auth UI ────────────────────────────────────────────────────────────────
-function switchAuthTab(mode) {
-  _authMode = mode;
-  document.getElementById('auth-tab-signin').classList.toggle('active', mode === 'signin');
-  document.getElementById('auth-tab-signup').classList.toggle('active', mode === 'signup');
-  document.getElementById('auth-btn-text').textContent = mode === 'signin' ? 'Sign In' : 'Create Account';
-  document.getElementById('auth-error').style.display = 'none';
+// ── Auth: OAuth ──────────────────────────────────────────────────────────────
+function authGoogle() {
+  db.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  }).catch(e => toast(e.message || 'Google sign-in failed', 'error'));
 }
 
-function _authBtnLoading(on) {
-  document.getElementById('auth-btn-text').style.display    = on ? 'none' : '';
-  document.getElementById('auth-btn-spinner').style.display = on ? 'block' : 'none';
-  document.getElementById('auth-submit').disabled = on;
+function authApple() {
+  db.auth.signInWithOAuth({
+    provider: 'apple',
+    options: { redirectTo: window.location.href }
+  }).catch(() => toast('Apple sign-in coming soon', 'info'));
 }
 
-async function submitAuth() {
-  const email    = (document.getElementById('auth-email').value || '').trim();
-  const password = document.getElementById('auth-password').value || '';
-  const errEl    = document.getElementById('auth-error');
-  if (!email || !password) { errEl.textContent = 'Please enter your email and password.'; errEl.style.display = 'block'; return; }
+// ── Auth: Email Sign In ───────────────────────────────────────────────────────
+function _setSigninLoading(on) {
+  document.getElementById('signin-btn-text').style.display    = on ? 'none' : '';
+  document.getElementById('signin-btn-spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('signin-submit').disabled = on;
+}
 
-  _authBtnLoading(true);
+async function doSignIn() {
+  const email    = (document.getElementById('signin-email').value || '').trim();
+  const password = document.getElementById('signin-password').value || '';
+  const errEl    = document.getElementById('signin-error');
+  if (!email || !password) {
+    errEl.textContent = 'Please enter your email and password.';
+    errEl.style.display = 'block'; return;
+  }
+  _setSigninLoading(true);
   errEl.style.display = 'none';
-
-  const authCall = _authMode === 'signin'
-    ? db.auth.signInWithPassword({ email, password })
-    : db.auth.signUp({ email, password });
-
-  const timeout = new Promise((_, rej) =>
-    setTimeout(() => rej(new Error('Connection slow, try again')), 5000)
-  );
-
+  const timeout = new Promise((_, r) => setTimeout(() => r(new Error('Connection slow, try again')), 8000));
   try {
-    const { error } = await Promise.race([authCall, timeout]);
-    if (error) {
-      errEl.textContent = error.message;
-      errEl.style.display = 'block';
-      _authBtnLoading(false);
-    }
-    // On success: keep spinner — onAuthStateChange SIGNED_IN shows the app and resets it
+    const { error } = await Promise.race([db.auth.signInWithPassword({ email, password }), timeout]);
+    if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; }
+    // on success, onAuthStateChange SIGNED_IN handles routing
   } catch (e) {
-    errEl.textContent = e.message || 'Network error. Check your connection.';
+    errEl.textContent = e.message || 'Network error.';
     errEl.style.display = 'block';
-    _authBtnLoading(false);
+  } finally {
+    _setSigninLoading(false);
   }
 }
 
 async function signOut() {
   await db.auth.signOut();
-  // onAuthStateChange SIGNED_OUT handles the state reset and UI switch
   toast('Signed out', 'info');
 }
 
-// ── Onboarding submit ──────────────────────────────────────────────────────
-async function submitOnboarding() {
-  const name   = (document.getElementById('ob-name').value || '').trim();
-  const errEl  = document.getElementById('ob-error');
-  if (!name) { errEl.textContent = 'Please enter your name.'; errEl.style.display = 'block'; return; }
+// ── Onboarding: Screen 1 — Create Account ────────────────────────────────────
+function updatePasswordStrength() {
+  const pw = document.getElementById('ob-password').value;
+  const bars  = [document.getElementById('pw-bar-1'), document.getElementById('pw-bar-2'), document.getElementById('pw-bar-3')];
+  const label = document.getElementById('pw-strength-label');
+  bars.forEach(b => { b.className = 'pw-strength-bar'; });
+  if (!pw) { label.textContent = ''; return; }
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/[0-9!@#$%^&*]/.test(pw)) score++;
+  if (score === 1) {
+    bars[0].classList.add('pw-bar-weak');
+    label.textContent = 'Weak — add numbers or symbols';
+    label.style.color = 'var(--red)';
+  } else if (score === 2) {
+    bars[0].classList.add('pw-bar-good'); bars[1].classList.add('pw-bar-good');
+    label.textContent = 'Good';
+    label.style.color = 'var(--yellow)';
+  } else {
+    bars.forEach(b => b.classList.add('pw-bar-strong'));
+    label.textContent = 'Strong ✓';
+    label.style.color = 'var(--green)';
+  }
+}
 
-  document.getElementById('ob-btn-text').style.display = 'none';
-  document.getElementById('ob-btn-spinner').style.display = 'block';
-  document.getElementById('ob-submit').disabled = true;
+function _setSignupLoading(on) {
+  document.getElementById('signup-btn-text').style.display    = on ? 'none' : '';
+  document.getElementById('signup-btn-spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('signup-submit').disabled = on;
+}
+
+async function continueSignup() {
+  const firstName = (document.getElementById('ob-first-name').value || '').trim();
+  const email     = (document.getElementById('ob-email').value || '').trim();
+  const pw        = document.getElementById('ob-password').value || '';
+  const pwConfirm = document.getElementById('ob-password-confirm').value || '';
+  const errEl     = document.getElementById('signup-error');
+
+  if (!firstName) { errEl.textContent = 'Please enter your first name.'; errEl.style.display='block'; return; }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errEl.textContent = 'Please enter a valid email address.'; errEl.style.display='block'; return;
+  }
+  if (pw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display='block'; return; }
+  if (pw !== pwConfirm) { errEl.textContent = 'Passwords do not match.'; errEl.style.display='block'; return; }
+
+  _setSignupLoading(true);
   errEl.style.display = 'none';
+  _obData.firstName = firstName;
 
-  const goals = [...document.querySelectorAll('#onboarding-screen input[type=checkbox]:checked')].map(c => c.value);
-  localStorage.setItem('lifemaxx_primary_goals', JSON.stringify(goals));
+  const timeout = new Promise((_, r) => setTimeout(() => r(new Error('Connection slow, try again')), 8000));
   try {
-    const { error } = await db.from('profiles').insert({
-      id: currentUser.id,
-      name,
-      age:   parseInt(document.getElementById('ob-age').value)    || null,
-      gender: document.getElementById('ob-gender').value,
-      weight_kg: parseFloat(document.getElementById('ob-weight').value) || null,
-      height_cm: parseFloat(document.getElementById('ob-height').value) || null,
-      wake_time:  document.getElementById('ob-wake').value,
-      sleep_time: document.getElementById('ob-sleep-time').value,
-      weekly_training_hours: parseFloat(document.getElementById('ob-training').value) || null,
-      daily_caffeine_mg: parseInt(document.getElementById('ob-caffeine-goal').value)  || null,
-    });
+    const { data, error } = await Promise.race([db.auth.signUp({ email, password: pw }), timeout]);
     if (error) throw error;
-    localStorage.setItem('lifemaxx_profile_name', name);
-    userProfile = { name };
+
+    // Create partial profile immediately so step can be resumed
+    const uid = data.user?.id;
+    if (uid) {
+      await db.from('profiles').upsert(
+        { id: uid, name: firstName, onboarding_complete: false },
+        { onConflict: 'id' }
+      ).catch(() => {});
+      localStorage.setItem('lifemaxx_profile_name', firstName);
+    }
+    goToSlide('slide-body');
+  } catch (e) {
+    errEl.textContent = e.message || 'Error creating account. Try again.';
+    errEl.style.display = 'block';
+  } finally {
+    _setSignupLoading(false);
+  }
+}
+
+// ── Onboarding: Screen 2 — Body Metrics ──────────────────────────────────────
+let _obGender   = 'male';
+let _obUnitSys  = 'metric';
+
+function selectGender(g) {
+  _obGender = g;
+  ['male','female','other'].forEach(id => {
+    document.getElementById('pill-' + id).classList.toggle('active', id === g);
+  });
+}
+
+function selectUnit(u) {
+  _obUnitSys = u;
+  document.getElementById('unit-metric').classList.toggle('active', u === 'metric');
+  document.getElementById('unit-imperial').classList.toggle('active', u === 'imperial');
+  document.getElementById('weight-label').textContent = u === 'metric' ? 'Weight (kg)' : 'Weight (lbs)';
+  document.getElementById('height-label').textContent = u === 'metric' ? 'Height (cm)' : 'Height (ft)';
+  const wp = document.getElementById('ob2-weight');
+  const hp = document.getElementById('ob2-height');
+  wp.placeholder = u === 'metric' ? '80' : '175';
+  hp.placeholder = u === 'metric' ? '180' : '5.11';
+}
+
+async function continueBody() {
+  const age    = parseInt(document.getElementById('ob2-age').value) || null;
+  const wRaw   = parseFloat(document.getElementById('ob2-weight').value) || null;
+  const hRaw   = parseFloat(document.getElementById('ob2-height').value) || null;
+
+  // Convert to metric for storage
+  const weightKg = wRaw && _obUnitSys === 'imperial' ? +(wRaw / 2.20462).toFixed(1) : wRaw;
+  const heightCm = hRaw && _obUnitSys === 'imperial' ? +(hRaw * 30.48).toFixed(1) : hRaw;
+
+  if (currentUser) {
+    await db.from('profiles').upsert(
+      { id: currentUser.id, name: _obData.firstName || localStorage.getItem('lifemaxx_profile_name'),
+        age, gender: _obGender, weight_kg: weightKg, height_cm: heightCm, onboarding_complete: false },
+      { onConflict: 'id' }
+    ).catch(() => {});
+  }
+  goToSlide('slide-lifestyle');
+}
+
+// ── Onboarding: Screen 3 — Lifestyle ─────────────────────────────────────────
+function updateCaffeineLabel(val) {
+  const v = parseInt(val);
+  document.getElementById('ob3-caff-val').textContent = v + 'mg';
+  let label = 'None';
+  if (v > 0 && v < 100)  label = 'Light';
+  else if (v >= 100 && v < 300) label = 'Moderate';
+  else if (v >= 300 && v < 400) label = 'High';
+  else if (v >= 400) label = 'Very High';
+  document.getElementById('ob3-caff-label').textContent = label;
+}
+
+async function continueLifestyle() {
+  const wakeTime    = document.getElementById('ob3-wake').value;
+  const sleepTime   = document.getElementById('ob3-sleep').value;
+  const trainHours  = parseFloat(document.getElementById('ob3-training').value) || 0;
+  const caffeineMg  = parseInt(document.getElementById('ob3-caffeine').value) || 0;
+
+  if (currentUser) {
+    await db.from('profiles').upsert(
+      { id: currentUser.id, wake_time: wakeTime, sleep_time: sleepTime,
+        weekly_training_hours: trainHours, daily_caffeine_mg: caffeineMg, onboarding_complete: false },
+      { onConflict: 'id' }
+    ).catch(() => {});
+  }
+  goToSlide('slide-goals');
+}
+
+// ── Onboarding: Screen 4 — Goals ─────────────────────────────────────────────
+let _selectedGoals = [];
+
+function toggleGoalCard(el, goal) {
+  const idx = _selectedGoals.indexOf(goal);
+  if (idx === -1) {
+    _selectedGoals.push(goal);
+    el.classList.add('selected');
+  } else {
+    _selectedGoals.splice(idx, 1);
+    el.classList.remove('selected');
+  }
+  const continueBtn = document.getElementById('goals-continue-btn');
+  if (continueBtn) {
+    const hasGoal = _selectedGoals.length > 0;
+    continueBtn.style.opacity       = hasGoal ? '1'    : '0.4';
+    continueBtn.style.pointerEvents = hasGoal ? 'auto' : 'none';
+  }
+  if (navigator.vibrate) navigator.vibrate(8);
+}
+
+async function continueGoals() {
+  if (!_selectedGoals.length) return;
+  localStorage.setItem('lifemaxx_primary_goals', JSON.stringify(_selectedGoals));
+
+  if (currentUser) {
+    await db.from('profiles').upsert(
+      { id: currentUser.id, primary_goals: _selectedGoals, onboarding_complete: false },
+      { onConflict: 'id' }
+    ).catch(() => {});
+  }
+
+  // Show name in all-set heading
+  const name = _obData.firstName || localStorage.getItem('lifemaxx_profile_name') || '';
+  const heading = document.getElementById('allset-name-heading');
+  if (heading) heading.textContent = name ? `You're all set, ${name}.` : "You're all set!";
+
+  goToSlide('slide-allset');
+}
+
+// ── Onboarding: Screen 5 — All Set ───────────────────────────────────────────
+async function enterApp() {
+  document.getElementById('enter-btn-text').style.display    = 'none';
+  document.getElementById('enter-btn-spinner').style.display = 'block';
+  document.getElementById('enter-app-btn').disabled = true;
+
+  const name = _obData.firstName || localStorage.getItem('lifemaxx_profile_name') || '';
+  try {
+    if (currentUser) {
+      await db.from('profiles').upsert(
+        { id: currentUser.id, name: name || undefined, onboarding_complete: true,
+          primary_goals: _selectedGoals.length ? _selectedGoals : undefined },
+        { onConflict: 'id' }
+      );
+      localStorage.setItem('lifemaxx_profile_name', name);
+      userProfile = { name };
+    }
+    initState();
     setGreetingName(name);
     showAppScreen();
     initTheme();
     renderPeak();
-    toast(`Welcome to Lifemaxx, ${name}! 🚀`);
+    if (currentUser) backgroundRefresh(currentUser.id);
+    toast(`Welcome to Lifemaxx, ${name || 'legend'}! 🚀`);
   } catch (e) {
-    errEl.textContent = e.message || 'Error saving profile. Try again.';
-    errEl.style.display = 'block';
-  } finally {
-    document.getElementById('ob-btn-text').style.display = '';
-    document.getElementById('ob-btn-spinner').style.display = 'none';
-    document.getElementById('ob-submit').disabled = false;
+    toast('Error saving profile — please try again', 'error');
+    document.getElementById('enter-btn-text').style.display    = '';
+    document.getElementById('enter-btn-spinner').style.display = 'none';
+    document.getElementById('enter-app-btn').disabled = false;
   }
 }
 
-// ── Auth state listener ────────────────────────────────────────────────────
-// _fastShowDone = true means init() already showed the app from cached state.
-// The listener only drives background refresh or handles fresh sign-in/out.
+// ── Onboarding routing helper ─────────────────────────────────────────────────
+function getOnboardingSlide(profile) {
+  if (!profile)              return 'slide-body';      // OAuth user, no profile yet
+  if (!profile.name)         return 'slide-signup';    // should not happen but safe
+  if (!profile.age && !profile.weight_kg && !profile.wake_time) return 'slide-body';
+  if (!profile.wake_time)    return 'slide-lifestyle';
+  if (!profile.primary_goals || !profile.primary_goals.length)  return 'slide-goals';
+  return 'slide-allset';
+}
+
+// ── Auth state listener ───────────────────────────────────────────────────────
 let _fastShowDone = false;
 
 db.auth.onAuthStateChange((event, session) => {
@@ -1763,41 +2249,50 @@ db.auth.onAuthStateChange((event, session) => {
     if (session?.user) {
       currentUser = session.user;
       if (_fastShowDone) {
-        // App already visible — refresh data silently in the background
         backgroundRefresh(session.user.id);
       } else {
-        // Session exists but no local cache
         initState();
         _fastShowDone = true;
         const cachedName = localStorage.getItem('lifemaxx_profile_name');
         if (cachedName) {
           userProfile = { name: cachedName };
+          _obData.firstName = cachedName;
           setGreetingName(cachedName);
-          showAppScreen();
-          initTheme();
-          renderPeak();
+          showAppScreen(); initTheme(); renderPeak();
           backgroundRefresh(currentUser.id);
         } else {
-          // Must determine onboarding status — non-blocking
-          db.from('profiles').select('name').eq('id', currentUser.id).maybeSingle()
+          db.from('profiles').select('*').eq('id', currentUser.id).maybeSingle()
             .then(({ data: profile }) => {
-              if (profile) {
+              if (profile?.onboarding_complete) {
                 localStorage.setItem('lifemaxx_profile_name', profile.name);
                 userProfile = profile;
+                _obData.firstName = profile.name;
                 setGreetingName(profile.name);
-                showAppScreen();
-                initTheme();
-                renderPeak();
+                showAppScreen(); initTheme(); renderPeak();
                 backgroundRefresh(currentUser.id);
               } else {
-                showOnboardingScreen();
+                // Restore name if partial profile exists
+                if (profile?.name) {
+                  _obData.firstName = profile.name;
+                  localStorage.setItem('lifemaxx_profile_name', profile.name);
+                }
+                // For OAuth users prefill name from metadata
+                if (!profile?.name) {
+                  const meta = session.user.user_metadata;
+                  const oauthName = meta?.full_name || meta?.name || meta?.given_name || '';
+                  if (oauthName) {
+                    _obData.firstName = oauthName;
+                    localStorage.setItem('lifemaxx_profile_name', oauthName);
+                    db.from('profiles').upsert({ id: currentUser.id, name: oauthName, onboarding_complete: false }, { onConflict: 'id' }).catch(() => {});
+                  }
+                }
+                showAuthScreen(getOnboardingSlide(profile));
               }
             })
-            .catch(() => { showAuthScreen(); });
+            .catch(() => showAuthScreen());
         }
       }
     } else if (!_fastShowDone) {
-      // No session at all
       _fastShowDone = true;
       showAuthScreen();
     }
@@ -1805,38 +2300,54 @@ db.auth.onAuthStateChange((event, session) => {
     currentUser = session.user;
     initState();
     _fastShowDone = true;
-    _authBtnLoading(false);
+    _setSigninLoading(false);
+    _setSignupLoading(false);
     const cachedName = localStorage.getItem('lifemaxx_profile_name');
     if (cachedName) {
       userProfile = { name: cachedName };
+      _obData.firstName = cachedName;
       setGreetingName(cachedName);
-      showAppScreen();
-      initTheme();
-      renderPeak();
+      showAppScreen(); initTheme(); renderPeak();
       backgroundRefresh(currentUser.id);
     } else {
-      db.from('profiles').select('name').eq('id', currentUser.id).maybeSingle()
+      db.from('profiles').select('*').eq('id', currentUser.id).maybeSingle()
         .then(({ data: profile }) => {
-          if (!profile) {
-            showOnboardingScreen();
-          } else {
+          if (profile?.onboarding_complete) {
             localStorage.setItem('lifemaxx_profile_name', profile.name);
             userProfile = profile;
+            _obData.firstName = profile.name;
             setGreetingName(profile.name);
-            showAppScreen();
-            initTheme();
-            renderPeak();
+            initState();
+            showAppScreen(); initTheme(); renderPeak();
             backgroundRefresh(currentUser.id);
+          } else {
+            // OAuth user or resume onboarding
+            if (profile?.name) {
+              _obData.firstName = profile.name;
+              localStorage.setItem('lifemaxx_profile_name', profile.name);
+            } else {
+              const meta = session.user.user_metadata;
+              const oauthName = meta?.full_name || meta?.name || meta?.given_name || '';
+              if (oauthName) {
+                _obData.firstName = oauthName;
+                localStorage.setItem('lifemaxx_profile_name', oauthName);
+                db.from('profiles').upsert({ id: currentUser.id, name: oauthName, onboarding_complete: false }, { onConflict: 'id' }).catch(() => {});
+              }
+            }
+            initState();
+            showAuthScreen(getOnboardingSlide(profile));
           }
         })
-        .catch(() => { showOnboardingScreen(); });
+        .catch(() => { initState(); showAuthScreen(getOnboardingSlide(null)); });
     }
   } else if (event === 'SIGNED_OUT') {
     _fastShowDone = false;
     currentUser = null; userProfile = null;
+    _obData = { firstName:'', gender:'male', unitSystem:'metric', goals:[] };
     initState();
     localStorage.removeItem(STATE_KEY);
     localStorage.removeItem('lifemaxx_profile_name');
+    localStorage.removeItem('lifemaxx_primary_goals');
     showAuthScreen();
   }
 });
@@ -3263,13 +3774,11 @@ function formatCurrency(n) {
   return n < 0 ? `-${formatted}` : formatted;
 }
 
-// ── Init ───────────────────────────────────────────────────────────────────
+// ── Init ─────────────────────────────────────────────────────────────────────
 (function init() {
   initState();
   initTheme();
 
-  // Read the Supabase session directly from localStorage — synchronous, zero latency.
-  // Key format: sb-<project-ref>-auth-token
   const SB_SESSION_KEY = 'sb-wgbbbtscfvbvpplfocal-auth-token';
   let cachedUser = null;
   try {
@@ -3280,24 +3789,20 @@ function formatCurrency(n) {
   const cachedProfileName = localStorage.getItem('lifemaxx_profile_name');
 
   if (cachedUser && cachedProfileName) {
-    // Returning user — show the app instantly using cached data.
-    // onAuthStateChange will validate the session and refresh data in background.
     currentUser = cachedUser;
     const cachedState = localStorage.getItem(STATE_KEY);
     if (cachedState) { try { Object.assign(S, JSON.parse(cachedState)); } catch {} }
     userProfile = { name: cachedProfileName };
+    _obData.firstName = cachedProfileName;
     setGreetingName(cachedProfileName);
     _fastShowDone = true;
     showAppScreen();
     renderPeak();
   } else {
-    // No confirmed returning user — show the loading overlay while Supabase resolves the session.
-    // Hard cap of 500ms: if onAuthStateChange hasn't fired by then, show auth screen.
     showLoadingScreen();
     setTimeout(() => { if (!_fastShowDone) { _fastShowDone = true; showAuthScreen(); } }, 500);
   }
 
-  // Register service worker for offline-first caching
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
