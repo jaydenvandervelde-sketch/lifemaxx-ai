@@ -79,10 +79,10 @@
       bottom: 0;
       left: 0; right: 0;
       height: calc(var(--nav-h) + var(--safe-bottom));
-      background: rgba(17,17,17,0.92);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-top: 1px solid var(--border);
+      background: rgba(8,8,8,0.6);
+      backdrop-filter: blur(28px) saturate(1.8);
+      -webkit-backdrop-filter: blur(28px) saturate(1.8);
+      border-top: 1px solid rgba(255,255,255,0.06);
       display: flex;
       align-items: flex-start;
       justify-content: space-around;
@@ -103,10 +103,11 @@
       color: var(--text-dim);
       min-width: 52px;
     }
-    .nav-btn .nav-icon { font-size: 22px; line-height: 1; }
+    .nav-btn .nav-icon { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
+    .nav-btn .nav-icon svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; transition: filter 0.2s; }
     .nav-btn .nav-label { font-size: 10px; font-weight: 500; letter-spacing: 0.3px; }
     .nav-btn.active { color: var(--purple-light); }
-    .nav-btn.active .nav-icon { filter: drop-shadow(0 0 6px var(--purple)); }
+    .nav-btn.active .nav-icon svg { filter: drop-shadow(0 0 5px var(--purple)); }
 
     /* ─── Cards & Typography ───────────────────────────── */
     .card {
@@ -223,13 +224,26 @@
       font-size: 72px;
       font-weight: 900;
       line-height: 1;
-      background: linear-gradient(135deg, #9D5CF0, #7C3AED, #5B21B6);
+      background-image: linear-gradient(135deg, #9D5CF0, #7C3AED, #5B21B6);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
       filter: drop-shadow(0 0 20px var(--purple-glow));
       text-align: center;
+      position: relative; z-index: 1;
     }
     .score-pct { font-size: 24px; font-weight: 700; color: var(--text-muted); }
+    .score-glow-wrap { position: relative; display: inline-block; }
+    .score-glow-wrap::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px; height: 100px;
+      background: radial-gradient(ellipse at center, rgba(124,58,237,0.35) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+      transition: background 0.5s;
+    }
 
     /* ─── Toast ────────────────────────────────────────── */
     #toast-container {
@@ -332,12 +346,12 @@
     .list-item-sub   { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
     /* ─── Tabs ─────────────────────────────────────────── */
-    .tabs { display: flex; gap: 4px; background: var(--card2); border-radius: 12px; padding: 4px; margin-bottom: 14px; }
+    .tabs { display: flex; gap: 4px; background: var(--card2); border-radius: 50px; padding: 4px; margin-bottom: 14px; border: 1px solid var(--border); }
     .tab-btn {
       flex: 1;
       padding: 8px;
       border: none;
-      border-radius: 9px;
+      border-radius: 50px;
       background: none;
       color: var(--text-muted);
       font-size: 13px;
@@ -345,7 +359,7 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-    .tab-btn.active { background: var(--purple); color: #fff; }
+    .tab-btn.active { background: var(--purple); color: #fff; box-shadow: 0 0 12px var(--purple-glow); }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
@@ -487,7 +501,7 @@
       --purple-glow: rgba(124,58,237,0.25);
     }
     html.light #nav {
-      background: rgba(245,245,247,0.95);
+      background: rgba(245,245,247,0.75);
     }
     html.light .section-header {
       background: var(--bg);
@@ -542,6 +556,67 @@
     .save-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); animation: blink 1s ease-in-out infinite; }
     .save-dot.synced { background: var(--green); animation: none; }
     @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+    /* ─── Top Accent Bar ─────────────────────────────── */
+    #top-accent-bar {
+      position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 999;
+      background: linear-gradient(90deg, var(--purple), var(--purple-light), #a78bfa, var(--purple));
+      background-size: 200% 100%;
+      animation: accent-slide 4s linear infinite;
+    }
+    @keyframes accent-slide {
+      0% { background-position: 0% 0%; }
+      100% { background-position: 200% 0%; }
+    }
+
+    /* ─── Dynamic Score Colors ─────────────────────────── */
+    .score-red    { background-image: linear-gradient(135deg, #f87171, #ef4444) !important; filter: drop-shadow(0 0 20px rgba(239,68,68,.45)) !important; }
+    .score-yellow { background-image: linear-gradient(135deg, #fde047, #eab308) !important; filter: drop-shadow(0 0 20px rgba(234,179,8,.45)) !important; }
+    .score-green  { background-image: linear-gradient(135deg, #4ade80, #22c55e) !important; filter: drop-shadow(0 0 20px rgba(34,197,94,.45)) !important; }
+
+    /* ─── Peak Window Pulse ────────────────────────────── */
+    @keyframes peak-pulse {
+      0%,100% { box-shadow: 0 0 0 0 transparent; border-color: var(--purple); }
+      50%      { box-shadow: 0 0 18px rgba(124,58,237,.45); border-color: var(--purple-light); }
+    }
+    .peak-window-pulse { animation: peak-pulse 2.5s ease-in-out infinite; }
+
+    /* ─── Active card border glow ──────────────────────── */
+    .section.active .card:first-of-type {
+      border-color: rgba(124,58,237,0.45);
+      box-shadow: 0 0 0 1px rgba(124,58,237,0.12), 0 2px 20px rgba(124,58,237,0.08);
+    }
+
+    /* ─── Why Score Details ────────────────────────────── */
+    .why-score-card { cursor: pointer; }
+    .why-score-summary { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--purple-light); font-weight: 600; list-style: none; }
+    .why-score-summary::-webkit-details-marker { display: none; }
+    .why-score-body { margin-top: 12px; }
+    .score-factor { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .score-factor:last-child { border-bottom: none; }
+    .score-factor-bar { height: 4px; border-radius: 2px; background: var(--purple); transition: width 0.5s; }
+
+    /* ─── Quick Exercise Buttons ───────────────────────── */
+    .quick-ex-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; margin-top: 10px; margin-bottom: 4px; }
+    .quick-ex-row::-webkit-scrollbar { display: none; }
+    .quick-ex-btn { flex-shrink: 0; padding: 6px 13px; border-radius: 20px; background: var(--card2); border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.18s; }
+    .quick-ex-btn:active { background: var(--purple-dim); border-color: var(--purple); color: var(--purple-light); transform: scale(0.96); }
+
+    /* ─── Recommended Split Badge ──────────────────────── */
+    .rec-badge { font-size: 9px; font-weight: 700; background: var(--purple); color: #fff; padding: 2px 5px; border-radius: 4px; margin-left: 5px; letter-spacing: 0.4px; text-transform: uppercase; vertical-align: middle; }
+
+    /* ─── Goals Empty State ────────────────────────────── */
+    .goals-empty { text-align: center; padding: 36px 16px 28px; }
+
+    /* ─── Streak Chip ──────────────────────────────────── */
+    .streak-chip { display: inline-flex; align-items: center; gap: 4px; background: rgba(251,146,60,.12); border: 1px solid rgba(251,146,60,.3); border-radius: 20px; padding: 3px 10px; font-size: 13px; font-weight: 700; color: #fb923c; }
+
+    /* ─── Disabled Button ──────────────────────────────── */
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+
+    /* ─── Settings Gear ────────────────────────────────── */
+    .gear-btn { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; transition: all 0.2s; }
+    .gear-btn:active { background: var(--purple-dim); border-color: var(--purple); color: var(--purple-light); }
   </style>
 </head>
 <body>
@@ -677,6 +752,9 @@
   <span id="save-label">Saving...</span>
 </div>
 
+<!-- Top Accent Bar -->
+<div id="top-accent-bar"></div>
+
 <!-- Toast Container -->
 <div id="toast-container"></div>
 
@@ -694,6 +772,9 @@
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <button id="theme-toggle" onclick="toggleTheme()" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:17px;cursor:pointer;line-height:1;">☀️</button>
+            <button class="gear-btn" onclick="openSettings()" aria-label="Settings">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
             <div style="font-size:13px;color:var(--text-muted);" id="peak-clock">—</div>
           </div>
         </div>
@@ -702,15 +783,26 @@
       <!-- Score -->
       <div class="card" style="text-align:center;padding:24px 18px;">
         <div class="card-title">Today's Performance Score</div>
-        <div class="score-number glow-pulse"><span id="peak-score">--</span><span class="score-pct">%</span></div>
+        <div class="score-glow-wrap" style="display:inline-block;">
+          <div class="score-number" id="score-display"><span id="peak-score">0</span><span class="score-pct">%</span></div>
+        </div>
         <div class="small muted" style="margin-top:6px;" id="peak-score-label">Calculating...</div>
       </div>
+
+      <!-- Why this score? -->
+      <details class="card why-score-card" style="margin-top:-6px;">
+        <summary class="why-score-summary">
+          <span>Why this score?</span>
+          <span style="font-size:11px;opacity:0.7;">tap to expand ▾</span>
+        </summary>
+        <div class="why-score-body" id="score-breakdown"></div>
+      </details>
 
       <!-- Energy Curve -->
       <div class="card">
         <div class="card-title">Hourly Energy Curve</div>
         <canvas id="energyChart" height="130"></canvas>
-        <div style="margin-top:14px;padding:12px;background:var(--purple-dim);border-radius:10px;border:1px solid var(--purple);">
+        <div id="peak-window-card" class="peak-window-pulse" style="margin-top:14px;padding:12px;background:var(--purple-dim);border-radius:10px;border:1px solid var(--purple);">
           <div style="font-weight:600;font-size:14px;color:var(--purple-light);">⚡ <span id="peak-window">Calculating peak window...</span></div>
           <div class="small muted" style="margin-top:4px;" id="peak-suggestion">Log your vitals to unlock your peak window.</div>
         </div>
@@ -938,6 +1030,20 @@
           <input type="text" id="ex-name" placeholder="Exercise name" />
           <button class="btn btn-primary btn-sm" onclick="addExercise()">+ Add</button>
         </div>
+        <div class="quick-ex-row">
+          <button class="quick-ex-btn" onclick="quickAddExercise('Bench Press')">Bench Press</button>
+          <button class="quick-ex-btn" onclick="quickAddExercise('Squat')">Squat</button>
+          <button class="quick-ex-btn" onclick="quickAddExercise('Deadlift')">Deadlift</button>
+          <button class="quick-ex-btn" onclick="quickAddExercise('OHP')">OHP</button>
+          <button class="quick-ex-btn" onclick="quickAddExercise('Barbell Row')">Barbell Row</button>
+          <button class="quick-ex-btn" onclick="quickAddExercise('Incline Press')">Incline Press</button>
+          <button class="quick-ex-btn" onclick="quickAddExercise('Pull-Ups')">Pull-Ups</button>
+          <button class="quick-ex-btn" onclick="quickAddExercise('Curl')">Curl</button>
+          <button class="quick-ex-btn" onclick="quickAddExercise('Tricep Dip')">Tricep Dip</button>
+          <button class="quick-ex-btn" onclick="quickAddExercise('Leg Press')">Leg Press</button>
+          <button class="quick-ex-btn" onclick="quickAddExercise('RDL')">RDL</button>
+          <button class="quick-ex-btn" onclick="quickAddExercise('Cable Fly')">Cable Fly</button>
+        </div>
       </div>
 
       <!-- History -->
@@ -1018,7 +1124,10 @@
     <div id="sec-goals" class="section">
       <div class="section-header">
         <div style="display:flex;align-items:center;justify-content:space-between;">
-          <h2>Goals</h2>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <h2>Goals</h2>
+            <span class="streak-chip" id="goals-top-streak" style="display:none;">🔥 <span id="goals-streak-num">0</span></span>
+          </div>
           <button class="btn btn-primary btn-sm" onclick="openGoalModal()">+ Goal</button>
         </div>
       </div>
@@ -1111,30 +1220,73 @@
   <!-- Bottom Nav -->
   <nav id="nav">
     <button class="nav-btn active" onclick="navigate('peak')" data-section="peak">
-      <span class="nav-icon">⚡</span>
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </span>
       <span class="nav-label">Peak</span>
     </button>
     <button class="nav-btn" onclick="navigate('health')" data-section="health">
-      <span class="nav-icon">❤️</span>
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </span>
       <span class="nav-label">Health</span>
     </button>
     <button class="nav-btn" onclick="navigate('workout')" data-section="workout">
-      <span class="nav-icon">💪</span>
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24"><path d="M6 4v16M18 4v16M8 12h8M3 8h3M18 8h3M3 16h3M18 16h3"/></svg>
+      </span>
       <span class="nav-label">Workout</span>
     </button>
     <button class="nav-btn" onclick="navigate('finance')" data-section="finance">
-      <span class="nav-icon">💰</span>
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v2M12 16v2M9.5 9a2.5 2.5 0 0 1 5 0c0 2.5-5 2.5-5 5a2.5 2.5 0 0 0 5 0"/></svg>
+      </span>
       <span class="nav-label">Finance</span>
     </button>
     <button class="nav-btn" onclick="navigate('goals')" data-section="goals">
-      <span class="nav-icon">🎯</span>
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      </span>
       <span class="nav-label">Goals</span>
     </button>
     <button class="nav-btn" onclick="navigate('mentor')" data-section="mentor">
-      <span class="nav-icon">🧠</span>
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10H12V2z"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 12V2"/></svg>
+      </span>
       <span class="nav-label">Mentor</span>
     </button>
   </nav>
+</div>
+
+<!-- ── Settings Modal ────────────────────────────── -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Settings</div>
+      <button class="modal-close" onclick="closeModal('settings-modal')">×</button>
+    </div>
+    <div class="list-item" style="padding:14px 0;">
+      <div class="list-item-left">
+        <div class="list-item-title">Appearance</div>
+        <div class="list-item-sub">Switch between dark and light mode</div>
+      </div>
+      <button id="settings-theme-btn" class="btn btn-secondary btn-sm" onclick="toggleTheme();updateSettingsThemeBtn()">☀️ Light</button>
+    </div>
+    <div class="list-item" style="padding:14px 0;">
+      <div class="list-item-left">
+        <div class="list-item-title">AI Mentor API Key</div>
+        <div class="list-item-sub">Manage your Anthropic API key</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('settings-modal');openApiKeyModal()">⚙️ Manage</button>
+    </div>
+    <div class="list-item" style="padding:14px 0;border-bottom:none;">
+      <div class="list-item-left">
+        <div class="list-item-title">Account</div>
+        <div class="list-item-sub">Sign out of Lifemaxx</div>
+      </div>
+      <button class="btn btn-sm" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--red);" onclick="signOut()">Sign Out</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Goal Modal ─────────────────────────────────── -->
@@ -1745,13 +1897,13 @@ function openApiKeyModal() {
 function updateClock() {
   const now = new Date();
   const h = now.getHours();
-  const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const greeting = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
   const el = document.getElementById('peak-greeting');
   const name = userProfile?.name || 'Jayden';
   if (el) el.textContent = `${greeting}, ${name}`;
 
-  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   const clk = document.getElementById('peak-clock');
   const dt  = document.getElementById('peak-datetime');
   if (clk) clk.textContent = timeStr;
@@ -1920,16 +2072,77 @@ function renderEnergyChart() {
   });
 }
 
+let _scoreAnimRaf = null;
+function animateScore(target) {
+  const el = document.getElementById('peak-score');
+  if (!el) return;
+  if (_scoreAnimRaf) cancelAnimationFrame(_scoreAnimRaf);
+  const from = 0;
+  const duration = 1100;
+  const t0 = performance.now();
+  function tick(now) {
+    const p = Math.min(1, (now - t0) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(from + (target - from) * eased);
+    if (p < 1) _scoreAnimRaf = requestAnimationFrame(tick);
+    else { el.textContent = target; _scoreAnimRaf = null; }
+  }
+  _scoreAnimRaf = requestAnimationFrame(tick);
+}
+
 function renderPeak() {
   const score = calcPeakScore();
-  const scoreEl = document.getElementById('peak-score');
-  if (scoreEl) scoreEl.textContent = score;
+  animateScore(score);
+
+  // Dynamic score color
+  const scoreDisplay = document.getElementById('score-display');
+  if (scoreDisplay) {
+    scoreDisplay.classList.remove('score-red', 'score-yellow', 'score-green');
+    if (score < 40) scoreDisplay.classList.add('score-red');
+    else if (score < 70) scoreDisplay.classList.add('score-yellow');
+    else scoreDisplay.classList.add('score-green');
+  }
+
   const labelEl = document.getElementById('peak-score-label');
   if (labelEl) {
     labelEl.textContent = score >= 80 ? '🔥 You\'re locked in today' :
                           score >= 60 ? '⚡ Solid foundation — push hard' :
                           score >= 40 ? '🌤 Recovery mode — do what you can' :
                           '🛌 Rest and recharge today';
+  }
+
+  // Score breakdown
+  const breakdownEl = document.getElementById('score-breakdown');
+  if (breakdownEl) {
+    const v = S.vitals;
+    const totalCaff = getTotalCaffeine();
+    const todayKey = new Date().toDateString();
+    const didWorkout = S.workoutHistory.some(w => w.date === todayKey);
+    const factors = [
+      { label: 'Sleep', value: v.sleep ? Math.round(Math.min(100, (v.sleep / 8) * 100)) : null, note: v.sleep ? `${v.sleep}h` : 'Not logged' },
+      { label: 'Sleep Quality', value: v.sleepQuality ? v.sleepQuality * 10 : null, note: v.sleepQuality ? `${v.sleepQuality}/10` : 'Not logged' },
+      { label: 'HRV', value: v.hrv ? Math.round(Math.min(100, (v.hrv / 80) * 100)) : null, note: v.hrv ? `${v.hrv}ms` : 'Not logged' },
+      { label: 'Mood', value: S.mood ? S.mood.mood : null, note: S.mood ? `${S.mood.mood}/100` : 'Not logged' },
+      { label: 'Caffeine', value: totalCaff > 0 ? (totalCaff <= 200 ? 80 : totalCaff <= 400 ? 50 : 20) : 50, note: totalCaff > 0 ? `${totalCaff}mg` : 'None logged' },
+      { label: 'Workout', value: didWorkout ? 100 : 0, note: didWorkout ? `${S.currentSplit} done` : 'Not done' },
+      { label: 'Stress', value: S.mood ? Math.max(0, 100 - S.mood.stress) : null, note: S.mood ? `${S.mood.stress}/100` : 'Not logged' },
+    ];
+    breakdownEl.innerHTML = factors.map(f => {
+      const pct = f.value ?? 50;
+      const color = pct >= 70 ? '#22c55e' : pct >= 40 ? '#eab308' : '#ef4444';
+      return `<div class="score-factor">
+        <div>
+          <div style="font-weight:500;">${f.label}</div>
+          <div class="tiny muted">${f.note}</div>
+        </div>
+        <div style="text-align:right;min-width:80px;">
+          <div style="font-weight:700;font-size:13px;color:${color};">${f.value !== null ? pct + '%' : '—'}</div>
+          <div style="height:4px;border-radius:2px;background:var(--border);margin-top:4px;width:80px;">
+            <div style="height:4px;border-radius:2px;background:${color};width:${pct}%;transition:width 0.6s;"></div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
   }
   const { start, end } = calcPeakWindow();
   const peakEl = document.getElementById('peak-window');
@@ -2208,7 +2421,7 @@ function toggleSupp(i) {
   const today = new Date().toDateString();
   const marking = S.supplements[i].doneDate !== today;
   S.supplements[i].doneDate = marking ? today : '';
-  if (marking) haptic(10);
+  if (marking) haptic(50);
   save(); renderSupplements();
 }
 function removeSupp(i) { S.supplements.splice(i, 1); save(); renderSupplements(); }
@@ -2266,9 +2479,27 @@ function setSplit(split) {
   S.currentSplit = split;
   save();
   document.getElementById('split-display').textContent = split;
-  document.querySelectorAll('[id^="split-"]').forEach(b => b.classList.remove('btn-primary'));
+  // Remove all highlights and badges, then add to selected
+  document.querySelectorAll('[id^="split-"]').forEach(b => {
+    b.classList.remove('btn-primary');
+    const badge = b.querySelector('.rec-badge');
+    if (badge) badge.remove();
+  });
   const btn = document.getElementById('split-' + split.toLowerCase());
   if (btn) btn.classList.add('btn-primary');
+  const startBtn = document.getElementById('workout-start-btn');
+  if (startBtn) startBtn.disabled = false;
+  // Re-add rec badge to recommended (if different from selected)
+  const rec = getRecommendedSplit();
+  if (rec.toLowerCase() !== split.toLowerCase()) {
+    const recBtn = document.getElementById('split-' + rec.toLowerCase());
+    if (recBtn) {
+      const badge = document.createElement('span');
+      badge.className = 'rec-badge';
+      badge.textContent = 'Rec';
+      recBtn.appendChild(badge);
+    }
+  }
 }
 
 function startWorkout() {
@@ -2391,12 +2622,42 @@ function suggestWeight(ex, setIdx) {
   return allDone ? `↑ ${(prev + 2.5).toFixed(1)}kg` : `${prev}kg`;
 }
 
+function getRecommendedSplit() {
+  const cycle = ['Push', 'Pull', 'Legs', 'Rest'];
+  if (!S.workoutHistory.length) return cycle[0];
+  const lastSplit = S.workoutHistory[0].split;
+  const idx = cycle.indexOf(lastSplit);
+  return idx === -1 ? cycle[0] : cycle[(idx + 1) % cycle.length];
+}
+
 function renderWorkout() {
+  // Clear all rec-badges and primary highlights
+  document.querySelectorAll('[id^="split-"]').forEach(b => {
+    b.classList.remove('btn-primary');
+    const badge = b.querySelector('.rec-badge');
+    if (badge) badge.remove();
+  });
+
   if (S.currentSplit) {
     document.getElementById('split-display').textContent = S.currentSplit;
     const btn = document.getElementById('split-' + S.currentSplit.toLowerCase());
     if (btn) btn.classList.add('btn-primary');
   }
+
+  // Add recommended badge
+  const rec = getRecommendedSplit();
+  const recBtn = document.getElementById('split-' + rec.toLowerCase());
+  if (recBtn && !S.workoutActive) {
+    const badge = document.createElement('span');
+    badge.className = 'rec-badge';
+    badge.textContent = 'Rec';
+    recBtn.appendChild(badge);
+  }
+
+  // Disable/enable start button
+  const startBtn = document.getElementById('workout-start-btn');
+  if (startBtn) startBtn.disabled = !S.currentSplit;
+
   if (S.workoutActive && S.workoutStart) {
     document.getElementById('workout-timer-disp').style.display = 'flex';
     document.getElementById('workout-start-btn').style.display = 'none';
@@ -2680,23 +2941,50 @@ function renderGoals() {
     </div>`;
   };
 
+  const emptyGoal = (label) => `
+    <div class="goals-empty">
+      <div style="font-size:52px;margin-bottom:14px;filter:drop-shadow(0 0 12px rgba(124,58,237,.3));">🎯</div>
+      <div style="font-weight:700;font-size:18px;margin-bottom:8px;">No ${label} goals yet</div>
+      <div class="small muted" style="margin-bottom:20px;line-height:1.6;max-width:240px;margin-left:auto;margin-right:auto;">Every champion started with a single goal. Set yours today.</div>
+      <button class="btn btn-primary" style="border-radius:50px;padding:12px 28px;" onclick="openGoalModal()">
+        <span style="font-size:18px;margin-right:4px;">+</span> Add Goal
+      </button>
+    </div>`;
+
   ['long','short'].forEach(type => {
     const el = document.getElementById(`goals-${type}-list`);
     if (!el) return;
     const goals = S.goals.filter(g => g.type === type);
-    el.innerHTML = goals.length ? goals.map(renderGoalCard).join('') : '<div class="dim small card card-sm">No goals yet — add one above</div>';
+    const label = type === 'long' ? 'long-term' : 'short-term';
+    el.innerHTML = goals.length ? goals.map(renderGoalCard).join('') : emptyGoal(label);
   });
 
   const dailyEl = document.getElementById('goals-daily-list');
   if (dailyEl) {
     const goals = S.goals.filter(g => g.type === 'daily');
-    dailyEl.innerHTML = goals.length ? `<div class="card" style="padding:8px 14px;">${goals.map(renderDailyGoal).join('')}</div>` : '<div class="dim small card card-sm">No daily goals yet</div>';
+    dailyEl.innerHTML = goals.length
+      ? `<div class="card" style="padding:8px 14px;">${goals.map(renderDailyGoal).join('')}</div>`
+      : `<div class="goals-empty">
+          <div style="font-size:52px;margin-bottom:14px;">✅</div>
+          <div style="font-weight:700;font-size:18px;margin-bottom:8px;">No daily habits yet</div>
+          <div class="small muted" style="margin-bottom:20px;line-height:1.6;max-width:240px;margin-left:auto;margin-right:auto;">Build consistency one day at a time. Your future self will thank you.</div>
+          <button class="btn btn-primary" style="border-radius:50px;padding:12px 28px;" onclick="openGoalModal()">
+            <span style="font-size:18px;margin-right:4px;">+</span> Add Daily Habit
+          </button>
+        </div>`;
   }
 
   // Streak
   checkDailyStreak();
   const streakEl = document.getElementById('daily-streak-val');
   if (streakEl) streakEl.textContent = S.dailyStreak;
+  // Update top-of-section streak
+  const topStreakEl = document.getElementById('goals-top-streak');
+  const topStreakNum = document.getElementById('goals-streak-num');
+  if (topStreakEl && topStreakNum) {
+    topStreakNum.textContent = S.dailyStreak;
+    topStreakEl.style.display = S.dailyStreak > 0 ? 'inline-flex' : 'none';
+  }
 
   renderIdeas();
 }
@@ -2707,7 +2995,7 @@ function toggleDailyGoal(id) {
   const today = new Date().toDateString();
   const marking = g.doneDate !== today;
   g.doneDate = marking ? today : '';
-  if (marking) haptic(12);
+  if (marking) haptic(50);
   save(); renderGoals();
 }
 
@@ -2745,7 +3033,7 @@ function renderIdeas() {
     <div class="list-item">
       <div class="list-item-left">
         <div class="list-item-title">${escHtml(idea.text)}</div>
-        <div class="list-item-sub">${new Date(idea.ts).toLocaleDateString()}</div>
+        <div class="list-item-sub">${new Date(idea.ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="removeIdea(${i})">✕</button>
     </div>`).join('');
@@ -2934,6 +3222,24 @@ async function extractContext() {
     save();
     toast('Saved raw (API error) ✓', 'info');
   }
+}
+
+// ── Quick Exercise Add ─────────────────────────────────────────────────────
+function quickAddExercise(name) {
+  document.getElementById('ex-name').value = name;
+  addExercise();
+}
+
+// ── Settings ───────────────────────────────────────────────────────────────
+function openSettings() {
+  updateSettingsThemeBtn();
+  openModal('settings-modal');
+}
+function updateSettingsThemeBtn() {
+  const btn = document.getElementById('settings-theme-btn');
+  if (!btn) return;
+  const isLight = document.documentElement.classList.contains('light');
+  btn.textContent = isLight ? '🌙 Dark' : '☀️ Light';
 }
 
 // ── Haptic ─────────────────────────────────────────────────────────────────
